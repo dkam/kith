@@ -21,6 +21,10 @@ Rails.application.routes.draw do
     collection { post :read_all }
   end
 
+  resources :notifications, only: %i[ index update ] do
+    collection { post :read_all }
+  end
+
   # Following is asked for, and answered, one edge at a time.
   get "follows", to: "follow_requests#index", as: :follows
   post "actors/:handle/follow", to: "follows#create", as: :follow_actor, constraints: { handle: /[A-Za-z0-9_]{2,32}/ }

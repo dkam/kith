@@ -1,0 +1,16 @@
+<% content_for :title, "Notifications" %>
+
+<div class="flex items-baseline justify-between">
+  <h1 class="font-serif text-2xl font-semibold">Notifications</h1>
+  <% if @notifications.any?(&:unread?) %>
+    <%= button_to "Mark all read", read_all_notifications_path, class: "btn-plain" %>
+  <% end %>
+</div>
+
+<% if @notifications.any? %>
+  <ul class="mt-8 divide-y divide-rule border-t border-rule">
+    <%= render partial: "notifications/notification", collection: @notifications %>
+  </ul>
+<% else %>
+  <p class="mt-8 border-t border-rule pt-8 text-sm text-quiet">Nothing to tell you.</p>
+<% end %>

@@ -9,9 +9,18 @@ class Comment < ApplicationRecord
   belongs_to :post
   belongs_to :actor
 
+  has_many :notifications, as: :subject, dependent: :delete_all
+
   scope :chronological, -> { order(created_at: :asc, id: :asc) }
+
+  after_create_commit :notify_author
 
   validates :body, presence: true, length: { maximum: BODY_LIMIT }
 
   delegate :display_name, to: :actor
+
+  private
+    def notify_author
+      Notification.deliver(:new_comment, to: post.actor, from: actor, about: self)
+    end
 end

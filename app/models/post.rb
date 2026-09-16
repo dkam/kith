@@ -13,6 +13,7 @@ class Post < ApplicationRecord
 
   has_many :comments, -> { chronological }, dependent: :destroy
   has_many :feed_items, dependent: :delete_all
+  has_many :notifications, as: :subject, dependent: :delete_all
 
   has_many_attached :photos
 

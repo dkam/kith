@@ -10,6 +10,8 @@ class Follow < ApplicationRecord
   belongs_to :follower_actor, class_name: "Actor"
   belongs_to :followed_actor, class_name: "Actor"
 
+  has_many :notifications, as: :subject, dependent: :delete_all
+
   scope :between, ->(follower, followed) { where(follower_actor_id: follower, followed_actor_id: followed) }
   scope :newest_first, -> { order(created_at: :desc) }
 

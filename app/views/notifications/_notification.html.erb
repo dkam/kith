@@ -1,0 +1,19 @@
+<li id="<%= dom_id notification %>" class="<%= "bg-accent/[0.03]" unless notification.read? %>">
+  <%= button_to notification_path(notification), method: :patch,
+        class: "flex w-full items-center gap-3 px-2 py-4 text-left hover:bg-rule/30",
+        form_class: "contents" do %>
+    <%= avatar_tag notification.actor, css_class: "size-8 rounded-full object-cover bg-rule shrink-0" %>
+
+    <span class="min-w-0 flex-1">
+      <span class="block text-sm">
+        <span class="font-medium"><%= notification.actor.to_s %></span>
+        <%= notification_sentence(notification) %>
+      </span>
+      <span class="hint block"><%= time_ago_in_words notification.created_at %> ago</span>
+    </span>
+
+    <% unless notification.read? %>
+      <span class="size-1.5 shrink-0 rounded-full bg-accent" aria-label="Unread"></span>
+    <% end %>
+  <% end %>
+</li>

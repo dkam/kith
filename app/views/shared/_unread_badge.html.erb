@@ -1,0 +1,7 @@
+<%# Counted from what the viewer may actually see, not from the table: an
+    unread badge for a notification that would be filtered out is itself a
+    disclosure. %>
+<% count = current_member.notifications.unread.includes(:subject).count { |n| visibility.notification?(n) } %>
+<% if count.positive? %>
+  <span class="ml-1 rounded-full bg-accent px-1.5 py-0.5 text-[0.6875rem] font-medium text-white"><%= count %></span>
+<% end %>

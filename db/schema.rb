@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_080000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -118,6 +118,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_070000) do
     t.index ["inviter_member_id"], name: "index_members_on_inviter_member_id"
   end
 
+  create_table "notifications", force: :cascade do |t|
+    t.integer "actor_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "kind", null: false
+    t.integer "member_id", null: false
+    t.datetime "read_at"
+    t.integer "subject_id", null: false
+    t.string "subject_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_notifications_on_actor_id"
+    t.index ["member_id", "id"], name: "index_notifications_on_member_id_and_id", order: { id: :desc }
+    t.index ["member_id", "read_at"], name: "index_notifications_on_member_id_and_read_at"
+    t.index ["member_id", "subject_type", "subject_id", "kind"], name: "index_notifications_on_member_and_subject_and_kind", unique: true
+    t.index ["member_id"], name: "index_notifications_on_member_id"
+    t.index ["subject_type", "subject_id"], name: "index_notifications_on_subject"
+  end
+
   create_table "posts", force: :cascade do |t|
     t.integer "actor_id", null: false
     t.integer "audience", default: 0, null: false
@@ -156,6 +173,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_070000) do
   add_foreign_key "invites", "members", column: "inviter_member_id"
   add_foreign_key "members", "actors"
   add_foreign_key "members", "members", column: "inviter_member_id"
+  add_foreign_key "notifications", "actors"
+  add_foreign_key "notifications", "members"
   add_foreign_key "posts", "actors"
   add_foreign_key "sessions", "members"
 end

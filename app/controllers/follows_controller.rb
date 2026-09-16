@@ -12,6 +12,8 @@ class FollowsController < ApplicationController
     @actor = actor
     @follow = Follow.request(current_actor, actor)
 
+    Notification.deliver(:new_follower, to: actor, from: current_actor, about: @follow) if @follow.persisted?
+
     respond_with_button
   end
 
@@ -21,6 +23,7 @@ class FollowsController < ApplicationController
     head :not_found and return unless @follow.followed_actor_id == current_actor.id
 
     @follow.accept!
+    Notification.deliver(:follow_accepted, to: @follow.follower_actor, from: current_actor, about: @follow)
     FanOutJob.perform_later(@follow)
 
     @actor = @follow.follower_actor
