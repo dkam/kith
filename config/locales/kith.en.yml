@@ -1,0 +1,12 @@
+en:
+  activerecord:
+    attributes:
+      member:
+        email_address: Email
+      # A member's public identity lives on its actor, but nobody filling in the
+      # join form should be told about "Actor handle".
+      member/actor:
+        handle: Handle
+        display_name: Name
+      actor:
+        display_name: Name

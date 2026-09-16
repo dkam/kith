@@ -1,0 +1,15 @@
+open:
+  code: openinvite01
+  inviter_member: alice
+  expires_at: <%= 7.days.from_now.to_fs(:db) %>
+
+expired:
+  code: expiredinvi1
+  inviter_member: alice
+  expires_at: <%= 2.days.ago.to_fs(:db) %>
+
+claimed:
+  code: claimedinvi1
+  inviter_member: alice
+  claimed_by_member: bob
+  expires_at: <%= 7.days.from_now.to_fs(:db) %>

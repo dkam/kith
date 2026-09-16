@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_024002) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_030000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -55,6 +55,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_024002) do
     t.index ["type"], name: "index_actors_on_type"
   end
 
+  create_table "invites", force: :cascade do |t|
+    t.integer "claimed_by_member_id"
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.integer "inviter_member_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["claimed_by_member_id"], name: "index_invites_on_claimed_by_member_id"
+    t.index ["code"], name: "index_invites_on_code", unique: true
+    t.index ["inviter_member_id"], name: "index_invites_on_inviter_member_id"
+  end
+
   create_table "members", force: :cascade do |t|
     t.integer "actor_id", null: false
     t.datetime "created_at", null: false
@@ -78,6 +90,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_024002) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "invites", "members", column: "claimed_by_member_id"
+  add_foreign_key "invites", "members", column: "inviter_member_id"
   add_foreign_key "members", "actors"
   add_foreign_key "members", "members", column: "inviter_member_id"
   add_foreign_key "sessions", "members"

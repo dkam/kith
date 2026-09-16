@@ -1,0 +1,55 @@
+<% content_for :title, "Join Kith" %>
+
+<div class="mx-auto max-w-sm">
+  <h1 class="font-serif text-3xl font-semibold">Join Kith</h1>
+  <p class="mt-2 text-sm text-quiet">
+    <%= @invite.inviter_member.display_name %> invited you.
+  </p>
+
+  <%= form_with model: @member, url: join_path(params[:code]), class: "mt-8 space-y-5" do |form| %>
+    <% if @member.errors.any? %>
+      <div class="rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
+        <ul class="list-disc space-y-1 pl-4">
+          <% @member.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <%= form.fields_for :actor do |actor_form| %>
+      <div>
+        <%= actor_form.label :handle, "Handle", class: "label" %>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-quiet">@</span>
+          <%= actor_form.text_field :handle, required: true, autofocus: true, autocomplete: "off", class: "field" %>
+        </div>
+        <p class="hint">Lowercase letters, numbers and underscores. You can't change this later.</p>
+      </div>
+
+      <div class="mt-5">
+        <%= actor_form.label :display_name, "Name", class: "label" %>
+        <%= actor_form.text_field :display_name, autocomplete: "name", class: "field" %>
+        <p class="hint">What your friends call you. You can change this whenever.</p>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.label :email_address, "Email", class: "label" %>
+      <%= form.email_field :email_address, required: true, autocomplete: "username", class: "field" %>
+    </div>
+
+    <div>
+      <%= form.label :password, "Password", class: "label" %>
+      <%= form.password_field :password, required: true, autocomplete: "new-password", maxlength: 72, class: "field" %>
+      <p class="hint">At least eight characters.</p>
+    </div>
+
+    <div>
+      <%= form.label :password_confirmation, "Confirm password", class: "label" %>
+      <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password", maxlength: 72, class: "field" %>
+    </div>
+
+    <%= form.submit "Join", class: "btn" %>
+  <% end %>
+</div>

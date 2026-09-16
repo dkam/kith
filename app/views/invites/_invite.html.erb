@@ -1,0 +1,18 @@
+<li class="flex items-baseline gap-4 py-4" id="<%= dom_id invite %>">
+  <div class="min-w-0 flex-1">
+    <% if invite.open? %>
+      <p class="truncate font-mono text-sm"><%= join_url(invite.code) %></p>
+      <p class="hint">Expires <%= invite.expires_at.to_fs(:long) %></p>
+    <% elsif invite.claimed? %>
+      <p class="text-sm">Used by <span class="font-medium"><%= invite.claimed_by_member.display_name %></span></p>
+      <p class="hint"><%= invite.updated_at.to_fs(:long) %></p>
+    <% else %>
+      <p class="text-sm text-quiet">Expired, unused</p>
+      <p class="hint">Expired <%= invite.expires_at.to_fs(:long) %></p>
+    <% end %>
+  </div>
+
+  <% unless invite.claimed? %>
+    <%= button_to "Revoke", invite_path(invite), method: :delete, class: "btn-plain shrink-0" %>
+  <% end %>
+</li>
