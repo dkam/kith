@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   resources :invites, only: %i[ index create destroy ]
 
   resource :settings, only: %i[ show update ], controller: "settings"
+  delete "settings/avatar", to: "settings#destroy_avatar", as: :settings_avatar
 
   resources :posts, except: :index do
     resources :comments, only: :create
