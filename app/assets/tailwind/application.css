@@ -345,8 +345,10 @@
     @apply font-serif text-2xl/8 font-semibold tracking-[-0.01em] text-title;
   }
 
-  /* Rendered Markdown post bodies. Text first: 18px Literata at 1.7, capped
-     at 65ch. */
+  /* Rendered post bodies. Text first: 18px Literata at 1.7, capped at 65ch.
+     The layout wraps every body in .prose-kith .lexxy-content, and Lexxy's own
+     content sheet is written entirely at :where() — zero specificity — so
+     every rule below wins without a single !important. */
   .prose-kith {
     @apply font-serif text-lg text-title;
     line-height: 1.7;
@@ -372,4 +374,152 @@
     line-height: 1.65;
     max-width: var(--measure-narrow);
   }
+}
+
+/* --------------------------------------------------------------------------
+ * The editor, and what it writes.
+ *
+ * Lexxy draws itself from CSS variables and nothing else, so repointing them
+ * is the whole of the theming — there is no second palette to keep in step,
+ * and dark follows for free because Kith's own tokens do.
+ *
+ * Three of the system's rules do real work here. Lexxy ships a blue accent, a
+ * four-hue syntax highlighter and a nine-colour highlighter pen; all of them
+ * are collapsed onto the warm ramp and the one accent, because a second hue
+ * would make the unread dot mean nothing. Code is told apart by its mono face
+ * and its sunken ground, not by colour.
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --lexxy-color-ink: var(--text-title);
+  --lexxy-color-ink-medium: var(--text-secondary);
+  --lexxy-color-ink-light: var(--text-meta);
+  --lexxy-color-ink-lighter: var(--hairline-strong);
+  --lexxy-color-ink-lightest: var(--bg-sunken);
+  --lexxy-color-ink-inverted: var(--text-on-accent);
+
+  --lexxy-color-accent-dark: var(--accent);
+  --lexxy-color-accent-medium: var(--accent);
+  --lexxy-color-accent-light: var(--accent-quiet);
+  --lexxy-color-accent-lightest: var(--accent-quiet);
+
+  /* No second hue. Lexxy uses these to colour file icons and diffs by kind;
+     Kith distinguishes with weight and whitespace instead. */
+  --lexxy-color-red: var(--text-meta);
+  --lexxy-color-green: var(--text-meta);
+  --lexxy-color-blue: var(--text-meta);
+  --lexxy-color-purple: var(--text-meta);
+
+  --lexxy-color-code-token-att: var(--text-title);
+  --lexxy-color-code-token-comment: var(--text-faint);
+  --lexxy-color-code-token-function: var(--text-title);
+  --lexxy-color-code-token-operator: var(--text-secondary);
+  --lexxy-color-code-token-property: var(--text-title);
+  --lexxy-color-code-token-punctuation: var(--text-secondary);
+  --lexxy-color-code-token-selector: var(--text-title);
+  --lexxy-color-code-token-variable: var(--text-title);
+
+  --lexxy-color-canvas: var(--surface);
+  --lexxy-color-text: var(--text-body);
+  --lexxy-color-text-subtle: var(--text-meta);
+  --lexxy-color-link: var(--accent-text);
+  --lexxy-color-selected: var(--accent-quiet);
+  --lexxy-color-selected-hover: var(--accent-quiet);
+  --lexxy-color-selected-dark: var(--accent);
+  --lexxy-color-code-bg: var(--bg-sunken);
+
+  --lexxy-color-table-header-bg: var(--bg-sunken);
+  --lexxy-color-table-cell-border: var(--hairline);
+
+  --lexxy-font-base: var(--font-sans);
+  --lexxy-text-small: 0.875rem;
+
+  --lexxy-focus-ring-color: var(--focus-ring);
+
+  /* 4px on controls, per the radius scale; the tray adds the toolbar gap on
+     top and lands on 6px. The one permitted elevation is reused for Lexxy's
+     popups rather than inventing a second. */
+  --lexxy-radius: 4px;
+  --lexxy-shadow: var(--shadow-pill);
+}
+
+/* Lexxy's own sheet is unlayered, and unlayered CSS beats every cascade layer
+ * however specific the layered selector is — so these overrides sit outside
+ * @layer components, where the rest of the system's classes live. Without
+ * that, a photograph keeps Lexxy's fit-content width and floats in the middle
+ * of the column no matter what is @applied to it.
+ */
+
+/* The composer tray. */
+lexxy-editor {
+  @apply border-rule-strong;
+  font-family: var(--font-sans);
+}
+
+lexxy-editor:focus-within {
+  @apply border-accent;
+}
+
+/* Writing a post looks like the post it becomes: the editable area is set in
+   Literata at the same size and leading as .prose-kith, and the toolbar
+   above it stays in Barlow, because a toolbar is chrome. */
+lexxy-editor .lexxy-editor__content {
+  @apply font-serif text-lg text-title;
+  line-height: 1.7;
+}
+
+lexxy-editor .lexxy-editor__content::before {
+  @apply font-serif text-lg text-hush;
+}
+
+lexxy-toolbar {
+  @apply border-rule;
+  font-family: var(--font-sans);
+}
+
+/* A photograph in prose, as a reader sees it. Scoped to .prose-kith rather
+   than .lexxy-content so the editor keeps Lexxy's own editing affordances —
+   selection outlines, the drag handle, the delete button — which are chrome
+   and have no business on a published post. Never a card, never shadowed,
+   never captioned in chrome: a caption is shown only when its author wrote
+   one. */
+.prose-kith .attachment {
+  @apply mx-0 w-full max-w-none p-0;
+  inline-size: auto;
+}
+
+/* Lexxy caps a rendered photo at 32rem tall and letterboxes it. The cap is
+   right — a panorama should not own the page — but it belongs at the width of
+   the reading column, and the photo is left to size itself inside it rather
+   than being stretched to a box with dead ground either side. */
+.prose-kith .attachment img {
+  @apply rounded-sm;
+  max-block-size: 40rem;
+}
+
+.prose-kith .attachment__caption {
+  @apply px-0 pt-2 font-sans text-sm text-meta;
+}
+
+/* Several photographs in a row read as one object: 2px between tiles, 2px
+   corners inside a 4px block. */
+.prose-kith .attachment-gallery {
+  @apply grid gap-0.5 overflow-hidden rounded-sm;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.prose-kith .attachment-gallery .attachment {
+  @apply m-0 w-full max-w-none;
+  inline-size: auto;
+}
+
+.prose-kith .attachment-gallery .attachment img {
+  @apply aspect-square rounded-xs object-cover;
+}
+
+/* A member's own highlighter would be a second hue. It gets the accent's
+   quiet step, which is the only tint in the system. */
+.prose-kith mark,
+.prose-kith .lexxy-content__highlight {
+  @apply rounded-xs bg-accent-quiet px-0.5 text-title;
 }
