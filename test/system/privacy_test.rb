@@ -31,7 +31,7 @@ class PrivacyTest < ApplicationSystemTestCase
     assert_no_text "Carol is invisible"
 
     shown = all("li[id^='comment_']").size
-    assert_text "#{shown} replies"
+    assert_text(/#{shown} replies/i)
   end
 
   test "a name without a profile link is still a name" do

@@ -9,7 +9,7 @@
 <%# scope: the record is a LocalActor, but the form speaks of actors. %>
 <%= form_with model: @actor, scope: :actor, url: settings_path, method: :patch, class: "mt-8 space-y-8" do |form| %>
   <% if @actor.errors.any? %>
-    <div class="rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
+    <div class="alert">
       <ul class="list-disc space-y-1 pl-4">
         <% @actor.errors.full_messages.each do |message| %>
           <li><%= message %></li>
@@ -27,8 +27,8 @@
   <div>
     <span class="label">Photo</span>
     <div class="flex items-center gap-4">
-      <%= avatar_tag @actor, css_class: "size-16 rounded-full object-cover bg-rule" %>
-      <%= form.file_field :avatar, accept: "image/jpeg,image/png,image/webp", direct_upload: true, class: "text-sm text-quiet file:mr-3 file:rounded-md file:border file:border-rule file:bg-white file:px-3 file:py-1.5 file:text-sm file:text-ink" %>
+      <%= avatar_tag @actor, css_class: "avatar size-16" %>
+      <%= form.file_field :avatar, accept: "image/jpeg,image/png,image/webp", direct_upload: true, class: "text-sm text-quiet file:mr-3 file:rounded-sm file:border file:border-rule-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:text-ink" %>
     </div>
     <p class="hint">Location and camera data are removed from anything you upload.</p>
   </div>
@@ -38,14 +38,14 @@
     <div class="space-y-3">
       <% {
         everyone: [ "Everyone here", "Anyone signed in can open your profile from your name." ],
-        connections_only: [ "People I'm connected with", "Your name still shows on your comments, but only connections can click through." ],
+        connections_only: [ "People I'm connected with", "People you're connected to can find you. To everyone else your name isn't a link and your posts aren't listed." ],
         invisible: [ "Nobody", "Your profile and your comments are for your connections only." ]
       }.each do |value, (label, description)| %>
-        <label class="flex items-baseline gap-3">
-          <%= form.radio_button :discoverable, value, class: "mt-1 accent-[var(--color-accent)]" %>
+        <label class="choice">
+          <%= form.radio_button :discoverable, value, class: "radio" %>
           <span>
-            <span class="text-sm font-medium"><%= label %></span>
-            <span class="block text-sm text-quiet"><%= description %></span>
+            <span class="choice-label"><%= label %></span>
+            <span class="choice-note"><%= description %></span>
           </span>
         </label>
       <% end %>

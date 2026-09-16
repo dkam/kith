@@ -1,10 +1,13 @@
 <% photos = post.photos.attachments %>
 <% if photos.any? %>
-  <div class="mt-4 grid gap-2 <%= photos.size > 1 ? "grid-cols-2" : "grid-cols-1" %>">
+  <%# A photo grid reads as one object: 2px between tiles, 2px corners inside a
+      4px block. Photos are never circular, never shadowed, never captioned in
+      chrome — they are the only saturated thing on the page. %>
+  <div class="mt-4 grid gap-0.5 overflow-hidden rounded-sm <%= photos.size > 1 ? "grid-cols-2" : "grid-cols-1" %>">
     <% photos.each do |photo| %>
       <%= link_to media_url_for(photo, variant: :full), class: "block", target: "_blank", rel: "noopener" do %>
         <%= media_image_tag photo, variant: :feed, alt: "", loading: "lazy",
-              class: "w-full rounded-md border border-rule bg-rule object-cover" %>
+              class: "w-full rounded-xs bg-sunken object-cover" %>
       <% end %>
     <% end %>
   </div>

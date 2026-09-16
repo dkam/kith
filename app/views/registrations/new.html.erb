@@ -8,7 +8,7 @@
 
   <%= form_with model: @member, url: join_path(params[:code]), class: "mt-8 space-y-5" do |form| %>
     <% if @member.errors.any? %>
-      <div class="rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
+      <div class="alert">
         <ul class="list-disc space-y-1 pl-4">
           <% @member.errors.full_messages.each do |message| %>
             <li><%= message %></li>

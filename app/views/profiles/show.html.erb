@@ -1,7 +1,7 @@
 <% content_for :title, @actor.to_s %>
 
 <header class="flex items-start gap-4 border-b border-rule pb-8">
-  <%= avatar_tag @actor, css_class: "size-16 rounded-full object-cover bg-rule shrink-0" %>
+  <%= avatar_tag @actor, css_class: "avatar size-16 shrink-0" %>
 
   <div class="min-w-0 flex-1">
     <h1 class="font-serif text-2xl font-semibold"><%= @actor.to_s %></h1>

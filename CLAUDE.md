@@ -173,6 +173,15 @@ Two habits that fall out of it:
   **No component library.** Shared classes (`.field`, `.btn`, `.prose-kith`) are
   defined with `@apply` in `app/assets/tailwind/application.css` so the views
   stay readable.
+- The look is the **Kith Design System**, imported 2026-09-16 and installed as
+  the `kith-design` skill — read `.claude/skills/kith-design/readme.md` before
+  designing anything new. Warm neutrals on paper (`--warm-50`), one accent
+  (terracotta, permitted only on the unread dot, the one primary action on a
+  screen, links in prose, and the focus ring), Literata for what a member
+  wrote and Barlow for every control. Sentence case everywhere except the
+  uppercase micro-labels (`.label`, `.micro`). **Do not add a second hue** —
+  distinguish with whitespace, a hairline, or weight. Dark follows
+  `prefers-color-scheme`, with `data-theme` on `<html>` as an override.
 - A name is rendered by `shared/_actor_name`, the only place that decides
   whether a name is a link — and it asks `Visibility`.
 - Use `bin/rails` generators where sensible; delete what they scaffold that we

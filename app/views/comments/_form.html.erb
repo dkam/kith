@@ -1,9 +1,9 @@
 <%= form_with model: [ post, comment ], id: dom_id(post, :comment_form), class: "mt-6 flex gap-3" do |form| %>
-  <%= avatar_tag current_actor, css_class: "size-8 rounded-full object-cover bg-rule shrink-0" %>
+  <%= avatar_tag current_actor, css_class: "avatar size-8 shrink-0" %>
 
   <div class="min-w-0 flex-1">
     <%= form.label :body, "Your reply", class: "sr-only" %>
-    <%= form.text_area :body, rows: 2, class: "field", placeholder: "Say something",
+    <%= form.text_area :body, rows: 2, class: "field field-serif", placeholder: "Say something",
           data: { controller: "autogrow", action: "input->autogrow#resize" } %>
 
     <% if comment.errors.any? %>

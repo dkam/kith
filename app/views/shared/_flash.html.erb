@@ -1,7 +1,9 @@
+<%# One hue, so an alert speaks in the accent rather than introducing a red
+    that would dilute what terracotta means everywhere else. %>
 <% if alert = flash[:alert] %>
-  <p id="alert" class="mb-6 rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800"><%= alert %></p>
+  <p id="alert" class="alert"><%= alert %></p>
 <% end %>
 
 <% if notice = flash[:notice] %>
-  <p id="notice" class="mb-6 rounded-md border border-rule bg-white px-3.5 py-2.5 text-sm text-quiet"><%= notice %></p>
+  <p id="notice" class="notice"><%= notice %></p>
 <% end %>

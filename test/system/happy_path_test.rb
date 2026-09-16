@@ -113,7 +113,7 @@ class HappyPathTest < ApplicationSystemTestCase
       click_on "Reply"
 
       assert_text "Worth it every time.", wait: 5
-      assert_text "1 reply"
+      assert_text(/1 reply/i)
 
       sign_out
     end

@@ -1,62 +1,326 @@
+/* Kith — design tokens and shared classes.
+ *
+ * Imported from the Kith Design System (claude.ai/design/p/583cab02), 16 Sep 2026.
+ * `tokens/colors.css` is reproduced verbatim below; the rest of the system's
+ * token sheet deliberately restates Tailwind's own default scales, so it is
+ * referenced through Tailwind utilities rather than copied:
+ *
+ *   type ramp     text-xs … text-4xl, untouched
+ *   spacing       the 0.25rem step — p-4, gap-6
+ *   reading column max-w-2xl (42rem = the system's --shell-max)
+ *   radii         rounded-xs 2px (photo tiles) · rounded-sm 4px (buttons,
+ *                 inputs, photo blocks) · rounded-md 6px (composer tray) ·
+ *                 rounded-full (avatars, pills, dots). Nothing rounder than
+ *                 6px except circles.
+ *
+ * Rules that live here rather than in a view: terracotta is permitted in
+ * exactly four places — the unread dot, the one primary action on a screen,
+ * links in prose, and the focus ring. There is no second hue, and no shadow
+ * system beyond the "N new" pill.
+ */
+
 @import "tailwindcss";
 
-@theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+/* --------------------------------------------------------------------------
+ * Tokens. Light and dark are authored independently — dark is not a filter,
+ * an inversion, or a derived palette.
+ * -------------------------------------------------------------------------- */
 
-  --color-ink: oklch(0.22 0.01 265);
-  --color-quiet: oklch(0.52 0.01 265);
-  --color-hush: oklch(0.72 0.01 265);
-  --color-rule: oklch(0.92 0.004 265);
-  --color-paper: oklch(0.99 0.002 95);
-  --color-accent: oklch(0.48 0.09 250);
+:root {
+  color-scheme: light;
+
+  /* base neutrals — warm, paper-like */
+  --warm-50: #faf9f6;
+  --warm-100: #f2f0eb;
+  --warm-200: #e5e1d9;
+  --warm-300: #d6d1c6;
+  --warm-400: #a39d92;
+  --warm-500: #7a756c;
+  --warm-600: #4a4741;
+  --warm-800: #2b2925;
+  --warm-900: #1c1a17;
+
+  /* base neutrals — warm, ink-like (dark theme ground) */
+  --night-50: #edeae3;
+  --night-100: #bdb8ae;
+  --night-200: #8e8880;
+  --night-300: #6a645c;
+  --night-400: #403c36;
+  --night-500: #2e2b27;
+  --night-700: #1e1c1a;
+  --night-800: #171614;
+  --night-900: #121110;
+
+  /* base accent — terracotta, the only chromatic hue in the system */
+  --clay-100: #f6eae3;
+  --clay-200: #e8c9b6;
+  --clay-400: #e08a5f;
+  --clay-500: #b3542f;
+  --clay-600: #9c4826;
+  --clay-700: #7d3a1e;
+
+  /* semantic aliases — light (default) */
+  --bg: var(--warm-50);
+  --bg-sunken: var(--warm-100);
+  --surface: #ffffff;
+  --surface-hover: var(--warm-100);
+  --hairline: var(--warm-200);
+  --hairline-strong: var(--warm-300);
+  --text-title: var(--warm-900);
+  --text-body: var(--warm-800);
+  --text-secondary: var(--warm-600);
+  --text-meta: var(--warm-500);
+  --text-faint: var(--warm-400);
+  --text-on-accent: var(--warm-50);
+  --accent: var(--clay-500);
+  --accent-hover: var(--clay-600);
+  --accent-press: var(--clay-700);
+  --accent-text: var(--clay-500);
+  --accent-quiet: var(--clay-100);
+  --unread: var(--clay-500);
+  --focus-ring: var(--clay-500);
+  --selection: var(--clay-100);
+
+  /* layout rhythm the Tailwind scale doesn't already name */
+  --measure: 65ch;        /* body column */
+  --measure-narrow: 52ch; /* excerpts, comments */
 }
+
+/* Dark follows the reader's system preference. An explicit data-theme on
+ * <html> wins either way, so a preference toggle can be added later without
+ * touching this file. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: var(--night-800);
+    --bg-sunken: var(--night-900);
+    --surface: var(--night-700);
+    --surface-hover: var(--night-500);
+    --hairline: var(--night-500);
+    --hairline-strong: var(--night-400);
+    --text-title: var(--night-50);
+    --text-body: var(--night-50);
+    --text-secondary: var(--night-100);
+    --text-meta: var(--night-200);
+    --text-faint: var(--night-300);
+    --text-on-accent: var(--night-900);
+    --accent: var(--clay-400);
+    --accent-hover: #eb9d75;
+    --accent-press: var(--clay-200);
+    --accent-text: var(--clay-400);
+    --accent-quiet: #33241c;
+    --unread: var(--clay-400);
+    --focus-ring: var(--clay-400);
+    --selection: #43301f;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: var(--night-800);
+  --bg-sunken: var(--night-900);
+  --surface: var(--night-700);
+  --surface-hover: var(--night-500);
+  --hairline: var(--night-500);
+  --hairline-strong: var(--night-400);
+  --text-title: var(--night-50);
+  --text-body: var(--night-50);
+  --text-secondary: var(--night-100);
+  --text-meta: var(--night-200);
+  --text-faint: var(--night-300);
+  --text-on-accent: var(--night-900);
+  --accent: var(--clay-400);
+  --accent-hover: #eb9d75;
+  --accent-press: var(--clay-200);
+  --accent-text: var(--clay-400);
+  --accent-quiet: #33241c;
+  --unread: var(--clay-400);
+  --focus-ring: var(--clay-400);
+  --selection: #43301f;
+}
+
+/* --------------------------------------------------------------------------
+ * Tailwind theme. `inline` so utilities resolve straight to the semantic
+ * token — bg-paper is background-color: var(--bg) — and the dark blocks above
+ * re-point every utility at once.
+ * -------------------------------------------------------------------------- */
+
+@theme inline {
+  --color-paper: var(--bg);
+  --color-sunken: var(--bg-sunken);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-rule: var(--hairline);
+  --color-rule-strong: var(--hairline-strong);
+
+  --color-title: var(--text-title);
+  --color-ink: var(--text-body);
+  --color-quiet: var(--text-secondary);
+  --color-meta: var(--text-meta);
+  --color-hush: var(--text-faint);
+  --color-on-accent: var(--text-on-accent);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-press: var(--accent-press);
+  --color-accent-quiet: var(--accent-quiet);
+  --color-unread: var(--unread);
+}
+
+@theme {
+  /* Two Google Fonts, linked in the layout. The split is functional, not
+   * decorative: if a member wrote it, it is Literata; if it is chrome, it is
+   * Barlow. */
+  --font-serif: "Literata", ui-serif, Georgia, "Times New Roman", serif;
+  --font-sans: "Barlow", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+
+  --spacing-tap: 2.75rem; /* 44px minimum tap target */
+
+  /* The single permitted elevation: the "N new" pill over scrolling text. */
+  --shadow-pill: 0 1px 2px rgb(28 26 23 / 0.08), 0 0 0 1px var(--hairline);
+}
+
+/* --------------------------------------------------------------------------
+ * Base
+ * -------------------------------------------------------------------------- */
 
 @layer base {
   html {
-    background-color: var(--color-paper);
-    color: var(--color-ink);
     -webkit-text-size-adjust: 100%;
   }
 
   body {
+    background-color: var(--bg);
+    color: var(--text-body);
     font-family: var(--font-sans);
+    letter-spacing: 0.005em;
+    text-wrap: pretty;
   }
 
+  ::selection {
+    background-color: var(--selection);
+  }
+
+  /* Focus is a 2px accent outline at 2px offset, and is never removed. */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* The system's base sheet underlines every link with a hairline. That is
+     right for a specimen card and wrong for a nav bar, so links are styled
+     where they are used and in .prose-kith. */
   a {
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
   }
 }
 
+/* --------------------------------------------------------------------------
+ * Shared classes. These are the design system's components; there is no
+ * component library and no second way to draw a button.
+ * -------------------------------------------------------------------------- */
+
 @layer components {
-  /* Forms: a single quiet field style, used everywhere. */
-  .field {
-    @apply block w-full rounded-md border border-rule bg-white px-3 py-2 text-ink placeholder:text-hush focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
-  }
-
-  .label {
-    @apply block text-sm font-medium text-quiet mb-1.5;
-  }
-
-  .hint {
-    @apply mt-1.5 text-sm text-quiet;
-  }
-
-  .error {
-    @apply mt-1.5 text-sm text-red-700;
-  }
-
+  /* Buttons. Three variants, and this is the only button in the system.
+     Controls warm rather than darken on hover; nothing scales or lifts. */
   .btn {
-    @apply inline-flex items-center justify-center rounded-md bg-ink px-3.5 py-2 text-sm font-medium text-white hover:bg-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-40 cursor-pointer;
+    @apply inline-flex min-h-tap items-center justify-center gap-2 rounded-sm bg-accent px-4 py-2
+           font-sans text-sm font-medium text-on-accent cursor-pointer
+           transition-colors duration-[120ms]
+           hover:bg-accent-hover active:bg-accent-press
+           disabled:opacity-40 disabled:pointer-events-none;
   }
 
   .btn-quiet {
-    @apply inline-flex items-center justify-center rounded-md border border-rule bg-white px-3.5 py-2 text-sm font-medium text-ink hover:border-hush focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 cursor-pointer;
+    @apply inline-flex min-h-tap items-center justify-center gap-2 rounded-sm border border-rule-strong
+           bg-transparent px-4 py-2 font-sans text-sm font-medium text-ink cursor-pointer
+           transition-colors duration-[120ms]
+           hover:bg-surface-hover
+           disabled:opacity-40 disabled:pointer-events-none;
   }
 
   .btn-plain {
-    @apply text-sm text-quiet underline hover:text-ink cursor-pointer;
+    @apply inline-flex items-center justify-center rounded-sm font-sans text-sm font-medium
+           text-quiet cursor-pointer transition-colors duration-[120ms] hover:text-ink;
+  }
+
+  /* Desktop list rows only — the one place a 32px control is allowed. */
+  .btn-sm {
+    @apply min-h-8 px-3 py-1;
+  }
+
+  /* Forms: one field style everywhere. */
+  .field {
+    @apply block w-full min-h-tap rounded-sm border border-rule-strong bg-surface px-3 py-2
+           font-sans text-base text-ink placeholder:text-hush
+           transition-colors duration-[120ms]
+           focus:border-accent focus:outline-2 focus:outline-offset-0 focus:outline-accent;
+  }
+
+  /* The composer's own fields, so writing a post looks like the post it becomes. */
+  .field-serif {
+    @apply font-serif text-lg leading-[1.7];
+  }
+
+  /* Micro-labels are the single exception to sentence case. */
+  .label,
+  .micro {
+    @apply block font-sans text-xs font-semibold uppercase tracking-[0.06em] text-meta;
+  }
+
+  .label {
+    @apply mb-1.5;
+  }
+
+  .hint {
+    @apply mt-1.5 font-sans text-sm text-quiet;
+  }
+
+  /* No second hue: an error speaks in the accent, the same colour that means
+     "this is the thing to look at" everywhere else. */
+  .error {
+    @apply mt-1.5 font-sans text-sm text-accent;
+  }
+
+  .notice,
+  .alert {
+    @apply mb-6 rounded-sm border px-3.5 py-2.5 font-sans text-sm;
+  }
+
+  .notice {
+    @apply border-rule bg-surface text-quiet;
+  }
+
+  .alert {
+    @apply border-rule-strong bg-accent-quiet text-title;
+  }
+
+  /* An exclusive choice where every option carries its consequence. */
+  .choice {
+    @apply flex items-baseline gap-3;
+  }
+
+  .choice-label {
+    @apply font-sans text-sm font-medium text-ink;
+  }
+
+  .choice-note {
+    @apply block font-sans text-sm text-quiet;
+  }
+
+  .radio {
+    @apply mt-1 accent-[var(--accent)];
+  }
+
+  /* Five fixed sizes with an initials fallback. The hairline is inset rather
+     than a border, so the circle never grows. */
+  .avatar {
+    @apply rounded-full bg-sunken object-cover;
+    box-shadow: inset 0 0 0 1px var(--hairline);
   }
 
   /* An unread post. Quiet: a hairline down the left margin, not a highlight. */
@@ -64,10 +328,29 @@
     @apply -ml-4 border-l-2 border-accent/40 pl-[calc(1rem-2px)];
   }
 
-  /* Rendered Markdown post bodies. Text first: comfortable measure, generous
-     leading, restrained headings. */
+  /* The 6px terracotta dot. It fades in place — marking read never reflows
+     text — and 400ms is the only animation in the product longer than a
+     hover. */
+  .unread-dot {
+    @apply size-1.5 rounded-full bg-unread transition-opacity duration-[400ms];
+  }
+
+  /* The floating "N new" affordance: the only element with a shadow. */
+  .pill {
+    @apply inline-flex min-h-tap items-center rounded-full bg-surface px-4 py-2
+           font-sans text-sm font-medium text-ink shadow-pill cursor-pointer;
+  }
+
+  .post-title {
+    @apply font-serif text-2xl/8 font-semibold tracking-[-0.01em] text-title;
+  }
+
+  /* Rendered Markdown post bodies. Text first: 18px Literata at 1.7, capped
+     at 65ch. */
   .prose-kith {
-    @apply font-serif text-[1.0625rem] leading-[1.7] text-ink;
+    @apply font-serif text-lg text-title;
+    line-height: 1.7;
+    max-width: var(--measure);
   }
   .prose-kith > * + * { @apply mt-4; }
   .prose-kith h1 { @apply font-sans text-xl font-semibold mt-8; }
@@ -78,8 +361,15 @@
   .prose-kith ol { @apply list-decimal pl-6; }
   .prose-kith li + li { @apply mt-1; }
   .prose-kith blockquote { @apply border-l-2 border-rule pl-4 text-quiet italic; }
-  .prose-kith code { @apply font-mono text-[0.9em] bg-rule/50 rounded px-1 py-0.5; }
-  .prose-kith pre { @apply font-mono text-sm bg-rule/40 rounded-md p-4 overflow-x-auto; }
+  .prose-kith code { @apply font-mono text-[0.9em] bg-sunken rounded-xs px-1 py-0.5; }
+  .prose-kith pre { @apply font-mono text-sm bg-sunken rounded-sm p-4 overflow-x-auto; }
   .prose-kith pre code { @apply bg-transparent p-0; }
   .prose-kith hr { @apply border-rule my-8; }
+
+  /* Comments are content, so they are set in Literata, at the narrow measure. */
+  .comment-body {
+    @apply font-serif text-base text-title whitespace-pre-line;
+    line-height: 1.65;
+    max-width: var(--measure-narrow);
+  }
 }

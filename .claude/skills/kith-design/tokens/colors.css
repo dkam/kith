@@ -1,0 +1,80 @@
+/* Kith colour system. Warm neutrals + one accent.
+   Light and dark are authored independently — dark is not a filter or inversion of light.
+   All values are plain hex so they drop straight into a Tailwind theme extension. */
+:root {
+  /* base neutrals — warm, paper-like */
+  --warm-50: #faf9f6;
+  --warm-100: #f2f0eb;
+  --warm-200: #e5e1d9;
+  --warm-300: #d6d1c6;
+  --warm-400: #a39d92;
+  --warm-500: #7a756c;
+  --warm-600: #4a4741;
+  --warm-800: #2b2925;
+  --warm-900: #1c1a17;
+
+  /* base neutrals — warm, ink-like (dark theme ground) */
+  --night-50: #edeae3;
+  --night-100: #bdb8ae;
+  --night-200: #8e8880;
+  --night-300: #6a645c;
+  --night-400: #403c36;
+  --night-500: #2e2b27;
+  --night-700: #1e1c1a;
+  --night-800: #171614;
+  --night-900: #121110;
+
+  /* base accent — terracotta, the only chromatic hue in the system */
+  --clay-100: #f6eae3;
+  --clay-200: #e8c9b6;
+  --clay-400: #e08a5f;
+  --clay-500: #b3542f;
+  --clay-600: #9c4826;
+  --clay-700: #7d3a1e;
+
+  /* semantic aliases — light (default) */
+  --bg: var(--warm-50);
+  --bg-sunken: var(--warm-100);
+  --surface: #ffffff;
+  --surface-hover: var(--warm-100);
+  --hairline: var(--warm-200);
+  --hairline-strong: var(--warm-300);
+  --text-title: var(--warm-900);
+  --text-body: var(--warm-800);
+  --text-secondary: var(--warm-600);
+  --text-meta: var(--warm-500);
+  --text-faint: var(--warm-400);
+  --text-on-accent: var(--warm-50);
+  --accent: var(--clay-500);
+  --accent-hover: var(--clay-600);
+  --accent-press: var(--clay-700);
+  --accent-text: var(--clay-500);
+  --accent-quiet: var(--clay-100);
+  --unread: var(--clay-500);
+  --focus-ring: var(--clay-500);
+  --selection: var(--clay-100);
+}
+
+/* dark theme — apply .dark (or [data-theme="dark"]) on <html> */
+.dark {
+  --bg: var(--night-800);
+  --bg-sunken: var(--night-900);
+  --surface: var(--night-700);
+  --surface-hover: var(--night-500);
+  --hairline: var(--night-500);
+  --hairline-strong: var(--night-400);
+  --text-title: var(--night-50);
+  --text-body: var(--night-50);
+  --text-secondary: var(--night-100);
+  --text-meta: var(--night-200);
+  --text-faint: var(--night-300);
+  --text-on-accent: var(--night-900);
+  --accent: var(--clay-400);
+  --accent-hover: #eb9d75;
+  --accent-press: var(--clay-200);
+  --accent-text: var(--clay-400);
+  --accent-quiet: #33241c;
+  --unread: var(--clay-400);
+  --focus-ring: var(--clay-400);
+  --selection: #43301f;
+}

@@ -1,0 +1,17 @@
+/* Minimal element defaults so specimen cards and kits inherit the brand without classes. */
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-ui);
+  -webkit-font-smoothing: antialiased;
+  text-wrap: pretty;
+}
+::selection { background: var(--selection); }
+a { color: var(--accent-text); text-decoration: none; border-bottom: 1px solid var(--hairline-strong); }
+a:hover { color: var(--accent-hover); border-bottom-color: currentColor; }
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+hr { border: 0; border-top: var(--border) solid var(--hairline); margin: 0; }

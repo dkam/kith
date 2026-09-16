@@ -1,5 +1,5 @@
 <li class="flex items-center gap-3 py-4" id="<%= dom_id request, :request %>">
-  <%= avatar_tag request.follower_actor, css_class: "size-9 rounded-full object-cover bg-rule shrink-0" %>
+  <%= avatar_tag request.follower_actor, css_class: "avatar size-9 shrink-0" %>
 
   <div class="min-w-0 flex-1">
     <p class="text-sm"><%= render "shared/actor_name", actor: request.follower_actor %> asked to follow you.</p>

@@ -4,7 +4,7 @@
      <%= "data-feed-item-url=#{feed_item_path(item)}" unless item.read? %>>
   <% unless item.read? %>
     <span data-reader-target="marker"
-          class="absolute -left-4 top-9 size-1.5 rounded-full bg-accent"
+          class="unread-dot absolute -left-4 top-9"
           aria-label="Unread"></span>
   <% end %>
 

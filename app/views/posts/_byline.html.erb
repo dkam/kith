@@ -1,5 +1,5 @@
 <div class="flex items-center gap-2.5 text-sm">
-  <%= avatar_tag post.actor, css_class: "size-7 rounded-full object-cover bg-rule" %>
+  <%= avatar_tag post.actor, css_class: "size-7 rounded-full object-cover bg-sunken" %>
   <%= render "shared/actor_name", actor: post.actor %>
   <span class="text-hush">·</span>
   <%= link_to post, class: "text-quiet no-underline hover:text-ink" do %>
@@ -8,6 +8,6 @@
     </time>
   <% end %>
   <% if post.audience_public? %>
-    <span class="rounded-full border border-rule px-1.5 py-0.5 text-[0.6875rem] uppercase tracking-wide text-quiet">Public</span>
+    <span class="micro rounded-full border border-rule px-2 py-0.5">Public</span>
   <% end %>
 </div>

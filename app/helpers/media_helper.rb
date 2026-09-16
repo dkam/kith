@@ -9,7 +9,7 @@ module MediaHelper
     image_tag media_url_for(attachment, variant: variant), **options
   end
 
-  def avatar_tag(actor, size: :thumb, css_class: "size-10 rounded-full object-cover bg-rule")
+  def avatar_tag(actor, size: :thumb, css_class: "avatar size-10")
     if actor.avatar.attached?
       media_image_tag actor.avatar.attachment, variant: size, alt: "", class: css_class, loading: "lazy"
     else

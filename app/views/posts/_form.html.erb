@@ -5,7 +5,7 @@
               "direct-upload:error->uploads#uploadError direct-upload:end->uploads#uploadEnd"
     } do |form| %>
   <% if post.errors.any? %>
-    <div class="rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
+    <div class="alert">
       <ul class="list-disc space-y-1 pl-4">
         <% post.errors.full_messages.each do |message| %>
           <li><%= message %></li>
@@ -16,12 +16,12 @@
 
   <div>
     <%= form.label :title, "Title", class: "label" %>
-    <%= form.text_field :title, autocomplete: "off", placeholder: "Optional", class: "field" %>
+    <%= form.text_field :title, autocomplete: "off", placeholder: "Optional", class: "field field-serif" %>
   </div>
 
   <div>
     <%= form.label :body, "Words", class: "label" %>
-    <%= form.text_area :body, rows: 14, class: "field font-serif leading-relaxed",
+    <%= form.text_area :body, rows: 14, class: "field field-serif",
           data: { uploads_target: "body" } %>
     <p class="hint">Markdown works: **bold**, _italic_, [links](https://example.com), lists, &gt; quotes.</p>
   </div>
@@ -34,7 +34,7 @@
     <%= form.file_field :photos, multiple: true, direct_upload: true,
           accept: "image/jpeg,image/png,image/webp,image/heic",
           data: { uploads_target: "input", action: "uploads#preview" },
-          class: "text-sm text-quiet file:mr-3 file:rounded-md file:border file:border-rule file:bg-white file:px-3 file:py-1.5 file:text-sm file:text-ink" %>
+          class: "text-sm text-quiet file:mr-3 file:rounded-sm file:border file:border-rule-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:text-ink" %>
 
     <p class="hint" data-uploads-target="status">
       Drop photos here, or choose them. Location and camera data are removed.
@@ -47,7 +47,7 @@
         <% post.photos.attachments.each do |photo| %>
           <li class="relative">
             <%= media_image_tag photo, variant: :thumb, alt: "",
-                  class: "aspect-square w-full rounded-md border border-rule object-cover" %>
+                  class: "aspect-square w-full rounded-sm bg-sunken object-cover" %>
           </li>
         <% end %>
       </ul>
@@ -59,18 +59,18 @@
     <fieldset class="border-t border-rule pt-6">
       <legend class="label">Who is this for</legend>
       <div class="space-y-3">
-        <label class="flex items-baseline gap-3">
-          <%= form.radio_button :audience, :followers, checked: true, class: "mt-1 accent-[var(--color-accent)]" %>
+        <label class="choice">
+          <%= form.radio_button :audience, :followers, checked: true, class: "radio" %>
           <span>
-            <span class="text-sm font-medium">People who follow me</span>
-            <span class="block text-sm text-quiet">Stays here, between the people you've accepted.</span>
+            <span class="choice-label">People who follow me</span>
+            <span class="choice-note">The people you've accepted. They can comment.</span>
           </span>
         </label>
-        <label class="flex items-baseline gap-3">
-          <%= form.radio_button :audience, :public, class: "mt-1 accent-[var(--color-accent)]" %>
+        <label class="choice">
+          <%= form.radio_button :audience, :public, class: "radio" %>
           <span>
-            <span class="text-sm font-medium">Anyone with the link</span>
-            <span class="block text-sm text-quiet">Readable without an account. This is the only kind of post that leaves this server.</span>
+            <span class="choice-label">Anyone with the link</span>
+            <span class="choice-note">Anyone on the internet, and other servers can keep copies.</span>
           </span>
         </label>
       </div>

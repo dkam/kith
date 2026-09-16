@@ -1,0 +1,31 @@
+/* Type scale is Tailwind's default ramp, unmodified, so implementers use text-sm / text-lg
+   and never a custom class. Only the family + measure tokens are ours. */
+:root {
+  --text-xs: 0.75rem;   --leading-xs: 1rem;
+  --text-sm: 0.875rem;  --leading-sm: 1.25rem;
+  --text-base: 1rem;    --leading-base: 1.5rem;
+  --text-lg: 1.125rem;  --leading-lg: 1.75rem;
+  --text-xl: 1.25rem;   --leading-xl: 1.75rem;
+  --text-2xl: 1.5rem;   --leading-2xl: 2rem;
+  --text-3xl: 1.875rem; --leading-3xl: 2.25rem;
+  --text-4xl: 2.25rem;  --leading-4xl: 2.5rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --leading-read: 1.7;  /* prose only — Literata at 18px */
+  --tracking-ui: 0.005em;
+  --tracking-label: 0.06em; /* uppercase micro-labels */
+
+  /* roles */
+  --type-post-title: var(--weight-semibold) var(--text-2xl) / var(--leading-2xl) var(--font-serif);
+  --type-post-body: var(--weight-regular) var(--text-lg) / var(--leading-read) var(--font-serif);
+  --type-excerpt: var(--weight-regular) var(--text-base) / 1.65 var(--font-serif);
+  --type-ui: var(--weight-medium) var(--text-sm) / var(--leading-sm) var(--font-sans);
+  --type-meta: var(--weight-regular) var(--text-sm) / var(--leading-sm) var(--font-sans);
+  --type-label: var(--weight-semibold) var(--text-xs) / var(--leading-xs) var(--font-sans);
+
+  --measure: 65ch;      /* body column */
+  --measure-narrow: 52ch; /* excerpts, comments */
+}
