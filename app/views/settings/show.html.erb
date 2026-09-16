@@ -14,10 +14,10 @@
 
 <%# scope: the record is a LocalActor, but the form speaks of actors. %>
 <%= form_with model: @actor, scope: :actor, url: settings_path, method: :patch, class: "mt-8 space-y-8" do |form| %>
-  <% if @actor.errors.any? %>
+  <% if (problems = @actor.errors.full_messages + @member.errors.full_messages).any? %>
     <div class="alert">
       <ul class="list-disc space-y-1 pl-4">
-        <% @actor.errors.full_messages.each do |message| %>
+        <% problems.each do |message| %>
           <li><%= message %></li>
         <% end %>
       </ul>
@@ -48,6 +48,20 @@
     </div>
     <p class="hint">Choose one, or paste a photo anywhere on this page. Location and camera data are removed from anything you upload.</p>
     <p class="hint" role="status" data-avatar-target="status"></p>
+  </div>
+
+  <%# Not part of the actor: where you are is a reading preference, and it sits
+      on your member beside your credentials. The controller saves the two
+      together. %>
+  <div>
+    <%= label_tag "member_time_zone", "Where you are", class: "label" %>
+    <%= time_zone_select :member, :time_zone, nil,
+          { include_blank: "#{Rails.application.config.time_zone} — this instance's clock" },
+          class: "field" %>
+    <p class="hint">
+      Kith says “3 hours ago” nearly everywhere, which needs no help. This is for
+      the few places it shows a date instead.
+    </p>
   </div>
 
   <fieldset>

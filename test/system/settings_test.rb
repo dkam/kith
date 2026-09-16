@@ -19,6 +19,15 @@ class SettingsTest < ApplicationSystemTestCase
     assert actors(:alice).reload.avatar.attached?
   end
 
+  test "saying where you are" do
+    visit settings_path
+    select "Melbourne", from: "Where you are"
+    click_on "Save"
+
+    assert_text "Saved."
+    assert_equal "Melbourne", members(:alice).reload.time_zone
+  end
+
   test "pasting words rather than a photo leaves the photo alone" do
     visit settings_path
 

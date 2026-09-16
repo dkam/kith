@@ -30,6 +30,40 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     assert actors(:alice).reload.connections_only?
   end
 
+  test "choosing where you are" do
+    patch settings_url, params: { member: { time_zone: "Melbourne" } }
+
+    assert_redirected_to settings_url
+    assert_equal "Melbourne", members(:alice).reload.time_zone
+  end
+
+  test "an invented time zone is rejected, and takes the rest of the form with it" do
+    patch settings_url, params: { actor: { display_name: "Alice B" }, member: { time_zone: "Middle Earth" } }
+
+    assert_response :unprocessable_content
+    assert_nil members(:alice).reload.time_zone
+    assert_equal "Alice Brennan", actors(:alice).reload.display_name,
+      "half a saved form is worse than none"
+  end
+
+  test "the time zone select shows where you said you were" do
+    members(:alice).update!(time_zone: "Melbourne")
+
+    get settings_url
+
+    assert_select "select[name=?] option[selected][value=?]", "member[time_zone]", "Melbourne"
+  end
+
+  test "settings always act on your own member, whatever the params say" do
+    sign_out
+    sign_in_as members(:bob)
+
+    patch settings_url, params: { member: { id: members(:alice).id, time_zone: "Melbourne" } }
+
+    assert_equal "Melbourne", members(:bob).reload.time_zone
+    assert_nil members(:alice).reload.time_zone
+  end
+
   test "the handle cannot be changed, even by asking nicely" do
     patch settings_url, params: { actor: { handle: "notalice", display_name: "Alice B" } }
 

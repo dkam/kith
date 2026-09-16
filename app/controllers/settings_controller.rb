@@ -1,12 +1,19 @@
 class SettingsController < ApplicationController
   def show
     @actor = current_actor
+    @member = current_member
   end
 
+  # One form, two records: who you are is on your actor, where you are is on
+  # your member. Both or neither — half a saved form is worse than none.
   def update
     @actor = current_actor
+    @member = current_member
 
-    if @actor.update(actor_params)
+    @actor.assign_attributes(actor_params)
+    @member.assign_attributes(member_params)
+
+    if save_together
       redirect_to settings_path, notice: "Saved."
     else
       render :show, status: :unprocessable_content
@@ -24,6 +31,27 @@ class SettingsController < ApplicationController
     # and it will become half of a federated address. Changing it would break
     # links that already exist.
     def actor_params
+      return {} unless params.key?(:actor)
+
       params.expect(actor: [ :display_name, :discoverable, :avatar ])
+    end
+
+    # Everything a member may change about their own reading of Kith. The
+    # actor's half is above; email and password have their own paths.
+    def member_params
+      return {} unless params.key?(:member)
+
+      params.expect(member: [ :time_zone ])
+    end
+
+    # The actor first, so that a bad time zone leaves its error on the member
+    # and a bad name leaves its error on the actor, rather than both objects
+    # carrying the same complaint through autosave.
+    def save_together
+      Member.transaction do
+        raise ActiveRecord::Rollback unless @actor.save && @member.save
+
+        true
+      end
     end
 end

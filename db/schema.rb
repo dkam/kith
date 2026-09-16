@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_17_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_17_010000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -131,6 +131,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_000000) do
     t.integer "inviter_member_id"
     t.string "password_digest", null: false
     t.integer "role", default: 0, null: false
+    t.string "time_zone"
     t.datetime "updated_at", null: false
     t.index ["actor_id"], name: "index_members_on_actor_id", unique: true
     t.index ["email_address"], name: "index_members_on_email_address", unique: true

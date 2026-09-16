@@ -149,4 +149,17 @@ class MemberTest < ActiveSupport::TestCase
       member.build_actor(type: "LocalActor", handle:, display_name: "Zoe")
       member
     end
+
+  test "a time zone is optional, and has to be one that exists" do
+    member = members(:alice)
+
+    assert member.update(time_zone: "Melbourne")
+    assert member.update(time_zone: nil), "nobody has to tell Kith where they are"
+    refute member.update(time_zone: "Middle Earth")
+  end
+
+  test "a member with no time zone falls back to the instance's" do
+    assert_equal Time.zone, members(:alice).zone
+    assert_equal ActiveSupport::TimeZone["Melbourne"], members(:alice).tap { |m| m.time_zone = "Melbourne" }.zone
+  end
 end

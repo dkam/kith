@@ -120,7 +120,8 @@ Integer primary keys. Don't reach for UUIDs.
 - **`members`** — credentials and email; `belongs_to :actor`. Local members
   always have an actor; remote actors never have a member. `role` is the
   ranked enum `member` / `moderator` / `admin` / `owner` — see `Authority` —
-  and `invite_allowance` is how many people they may bring in.
+  `invite_allowance` is how many people they may bring in, and `time_zone` is
+  where they read from (nullable: the instance's clock until they say).
 - **`posts`** — `belongs_to :actor`; `title` (optional), `audience` enum,
   `published_at` (**nullable: NULL is a draft**), `uri` (nullable now; will hold
   the ActivityPub id), `remote` boolean. The body is **not** a column: `has_rich_text :body` puts it in
@@ -153,6 +154,13 @@ Integer primary keys. Don't reach for UUIDs.
   columns have nothing left to say. Photographs moved with it: they were a
   `has_many_attached :photos` tray under the post, and are now embedded in the
   body, which is why `Post#photos` reads `body.embeds_attachments`.
+- `members.time_zone` was added. Nearly every time Kith shows is relative —
+  "3 hours ago" is the same sentence in every zone — so this is for the few
+  absolute ones, and for the day something is scheduled rather than posted.
+  `ApplicationController` wraps the whole request in `Time.use_zone`, so no
+  view has to remember to convert and no second path can forget. It is on
+  `members` rather than `actors` for the same reason `role` is: it belongs to
+  whoever holds the credentials, and a remote actor does no reading here.
 - `members.role` was added, and is not in the brief at all. It is the smallest
   thing that answers "who may take a post down" without a roles table, a
   permissions table and a gem: one ranked integer, four values, and a policy
@@ -424,7 +432,7 @@ was v1.7.8 — eight releases with no commit you could check out.
 1. App skeleton, `bin/setup`, `Procfile.dev`, CI.
 2. Authentication, invites (issue, claim, expire), first member from the
    console setup code (and the rake task), profile settings (display name,
-   avatar, discoverable).
+   avatar, discoverable, time zone).
 3. Posts: create/edit/delete, drafts, title, rich text body written in Lexxy
    with photographs embedded in the prose (drag, paste or pick; direct upload),
    audience selector, permalink.

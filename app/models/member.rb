@@ -27,12 +27,24 @@ class Member < ApplicationRecord
     default: :member, validate: { message: "is not a valid role" }
 
   normalizes :email_address, with: ->(e) { e.to_s.strip.downcase }
+  normalizes :time_zone, with: ->(name) { name.presence }
 
   validates :email_address, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }, uniqueness: true
   validates :password, length: { minimum: 8 }, allow_nil: true
+  # Optional: nobody has to tell Kith where they are, and until they do they
+  # read the instance's clock. Validated because a name that is not a zone
+  # would otherwise take down every request the member made.
+  validates :time_zone, inclusion: { in: ActiveSupport::TimeZone::MAPPING.keys, message: "is not a time zone Kith knows" },
+    allow_nil: true
   validate :an_owner_remains, on: :update
 
   delegate :handle, :display_name, :discoverable, to: :actor
+
+  # Where this member reads from, falling back to the instance's own clock.
+  # ActiveSupport::TimeZone[] is asked rather than trusted: a zone saved before
+  # the validation existed, or written straight to the column, must not be able
+  # to break a page.
+  def zone = ActiveSupport::TimeZone[time_zone.to_s] || Time.zone
 
   # Ranks compare, so `administers?` is true of the owner as well as an admin.
   # Ask these rather than `admin?`: a check written against one exact role is a
