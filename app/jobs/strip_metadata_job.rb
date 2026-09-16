@@ -15,6 +15,9 @@ class StripMetadataJob < ApplicationJob
   discard_on ActiveRecord::RecordNotFound
 
   def perform(attachment)
+    # The post may have been deleted while this sat in the queue.
+    return if attachment.destroyed? || !ActiveStorage::Attachment.exists?(attachment.id)
+
     blob = attachment.blob
     return unless STRIPPABLE_TYPES.include?(blob.content_type)
 

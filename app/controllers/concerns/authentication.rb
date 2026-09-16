@@ -17,12 +17,16 @@ module Authentication
       resume_session.present?
     end
 
+    # Resumes the session first: a controller that allows unauthenticated
+    # access still needs to know who is there when someone *is* signed in,
+    # because "signed out" and "signed in but not allowed" are different
+    # answers from Visibility.
     def current_member
-      Current.member
+      resume_session&.member
     end
 
     def current_actor
-      Current.actor
+      current_member&.actor
     end
 
     # Every read of anyone else's content goes through this.
