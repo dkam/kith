@@ -16,12 +16,42 @@ class Member < ApplicationRecord
 
   accepts_nested_attributes_for :actor
 
+  # What a member may *do* to this instance. Deliberately not what they may
+  # *see*: that is Visibility, and a role never widens it. The powers each rank
+  # carries are spelled out in Authority, which is the only thing that should
+  # be asking about them.
+  #
+  # Ranked, so every role carries what the one below it carries, with gaps left
+  # for a rank we have not needed yet.
+  enum :role, { member: 0, moderator: 5, admin: 10, owner: 20 },
+    default: :member, validate: { message: "is not a valid role" }
+
   normalizes :email_address, with: ->(e) { e.to_s.strip.downcase }
 
   validates :email_address, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }, uniqueness: true
   validates :password, length: { minimum: 8 }, allow_nil: true
+  validate :an_owner_remains, on: :update
 
   delegate :handle, :display_name, :discoverable, to: :actor
+
+  # Ranks compare, so `administers?` is true of the owner as well as an admin.
+  # Ask these rather than `admin?`: a check written against one exact role is a
+  # check that forgets about everyone above it.
+  def rank = self.class.rank_of(role)
+  def outranks?(other_role) = rank > self.class.rank_of(other_role)
+  def moderates? = rank >= self.class.rank_of(:moderator)
+  def administers? = rank >= self.class.rank_of(:admin)
+
+  # How much of their allowance a member has spent, and how much is left. An
+  # invite that expired unclaimed costs nothing: it brought nobody in and now
+  # never will. Lowering an allowance below what is already spent leaves zero
+  # rather than a negative, because it cannot take anybody back out again.
+  def invites_spent = issued_invites.counting_against_allowance.count
+  def invites_left = [ invite_allowance - invites_spent, 0 ].max
+
+  # -1 for anything that is not a role at all, so an unknown name can never
+  # come out looking like a rank that somebody outranks.
+  def self.rank_of(name) = roles.fetch(name.to_s, -1)
 
   # The only way a member is created outside the first-member rake task: by
   # claiming an invite. The member, its actor and the spending of the invite
@@ -53,7 +83,7 @@ class Member < ApplicationRecord
   # race is someone who already holds the console code, which is to say the
   # operator, twice.
   def self.create_first(handle:, display_name:, email_address:, password:, password_confirmation:)
-    member = new(email_address:, password:, password_confirmation:)
+    member = new(email_address:, password:, password_confirmation:, role: :owner)
     member.build_actor(type: "LocalActor", handle: handle, display_name: display_name.presence || handle, discoverable: :everyone)
 
     if exists?
@@ -64,4 +94,16 @@ class Member < ApplicationRecord
 
     member
   end
+
+  private
+    # Kith can hold two owners; it cannot hold none. Stepping down is fine once
+    # somebody else has the keys. This is a validation rather than a
+    # `before_destroy` on purpose: `Member.destroy_all` from the console is the
+    # operator resetting the instance, not an owner being locked out of it.
+    def an_owner_remains
+      return unless role_changed? && role_was == "owner"
+      return if self.class.owner.where.not(id: id).exists?
+
+      errors.add(:role, "would leave Kith with no owner")
+    end
 end

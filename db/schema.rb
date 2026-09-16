@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_130000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -104,6 +104,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_090000) do
     t.index ["follower_actor_id"], name: "index_follows_on_follower_actor_id"
   end
 
+  create_table "instances", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "invites_open", default: true, null: false
+    t.integer "member_cap"
+    t.datetime "updated_at", null: false
+  end
+
   create_table "invites", force: :cascade do |t|
     t.integer "claimed_by_member_id"
     t.string "code", null: false
@@ -120,12 +127,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_090000) do
     t.integer "actor_id", null: false
     t.datetime "created_at", null: false
     t.string "email_address", null: false
+    t.integer "invite_allowance", default: 5, null: false
     t.integer "inviter_member_id"
     t.string "password_digest", null: false
+    t.integer "role", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["actor_id"], name: "index_members_on_actor_id", unique: true
     t.index ["email_address"], name: "index_members_on_email_address", unique: true
     t.index ["inviter_member_id"], name: "index_members_on_inviter_member_id"
+    t.index ["role"], name: "index_members_on_role"
   end
 
   create_table "notifications", force: :cascade do |t|

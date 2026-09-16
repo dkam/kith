@@ -1,0 +1,5 @@
+# There is one instance row, always, and the tests open the door by default so
+# that closing it is what a test has to say out loud.
+kith:
+  invites_open: true
+  member_cap:

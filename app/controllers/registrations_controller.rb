@@ -24,7 +24,14 @@ class RegistrationsController < ApplicationController
   end
 
   private
+    # An invite is a key to a door that can be shut behind it. If it could not
+    # be, a cap would not be a cap: the invites already out there would walk
+    # straight past it, and "we are full" would only ever be nearly true.
     def set_invite
+      unless current_instance.accepting_members?
+        redirect_to new_session_path, alert: current_instance.closed_because and return
+      end
+
       @invite = Invite.open.find_by(code: params[:code])
 
       redirect_to new_session_path, alert: "That invite has been used already, or has expired." if @invite.nil?

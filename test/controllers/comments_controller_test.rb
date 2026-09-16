@@ -65,6 +65,24 @@ class CommentsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "a moderator can delete a reply on a post they can see" do
+    sign_in_as members(:mo)
+
+    assert_difference -> { Comment.count }, -1 do
+      delete comment_url(comments(:bob_on_alice_public))
+    end
+  end
+
+  test "a moderator cannot delete a reply on a post they cannot see" do
+    sign_in_as members(:mo)
+
+    assert_no_difference -> { Comment.count } do
+      delete comment_url(comments(:bob_on_alice_followers))
+    end
+
+    assert_response :not_found
+  end
+
   # --- The gated profile link -----------------------------------------------
 
   test "a commenter's name is always shown" do

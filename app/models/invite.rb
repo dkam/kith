@@ -15,6 +15,9 @@ class Invite < ApplicationRecord
   scope :expired, -> { where(expires_at: ..Time.current) }
   scope :open, -> { unclaimed.where(expires_at: Time.current..) }
   scope :newest_first, -> { order(created_at: :desc) }
+  # What an allowance is spent on: invites that brought somebody in, and
+  # invites that still might. One that expired unclaimed did neither.
+  scope :counting_against_allowance, -> { claimed.or(open) }
 
   before_validation :set_default_expiry, on: :create
   before_validation :set_code, on: :create

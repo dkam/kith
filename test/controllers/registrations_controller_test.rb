@@ -70,4 +70,41 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
         }
       }
     end
+
+  # --- The door shuts on invites already out there ---------------------------
+
+  test "an outstanding invite stops working once the door is closed" do
+    Instance.current.update!(invites_open: false)
+
+    get join_url(invites(:open).code)
+    assert_redirected_to new_session_url
+
+    assert_no_difference -> { Member.count } do
+      post join_url(invites(:open).code), params: valid_registration
+    end
+  end
+
+  test "an outstanding invite cannot take Kith past its cap" do
+    Instance.current.update!(member_cap: Member.count)
+
+    assert_no_difference -> { Member.count } do
+      post join_url(invites(:open).code), params: valid_registration
+    end
+
+    assert_redirected_to new_session_url
+  end
+
+  test "an invite still works while there is room" do
+    Instance.current.update!(member_cap: Member.count + 1)
+
+    assert_difference -> { Member.count }, 1 do
+      post join_url(invites(:open).code), params: valid_registration
+    end
+  end
+
+  private
+    def valid_registration
+      { member: { email_address: "zoe@example.com", password: "password123", password_confirmation: "password123",
+                  actor_attributes: { handle: "zoe", display_name: "Zoe" } } }
+    end
 end

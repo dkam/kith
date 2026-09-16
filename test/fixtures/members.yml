@@ -2,21 +2,42 @@ alice:
   actor: alice
   email_address: alice@example.com
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  role: owner
 
 bob:
   actor: bob
   email_address: bob@example.com
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: alice
+  role: member
 
 carol:
   actor: carol
   email_address: carol@example.com
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: alice
+  role: member
 
 dave:
   actor: dave
   email_address: dave@example.com
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: bob
+  role: member
+
+# mo and ada hold roles so the privacy fixtures above don't have to. Neither
+# follows anyone and nobody follows them: a role must be worth nothing to a
+# reader, and these two are how the tests prove it.
+mo:
+  actor: mo
+  email_address: mo@example.com
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  inviter_member: alice
+  role: moderator
+
+ada:
+  actor: ada
+  email_address: ada@example.com
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  inviter_member: alice
+  role: admin

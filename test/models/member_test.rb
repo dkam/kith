@@ -49,6 +49,95 @@ class MemberTest < ActiveSupport::TestCase
     assert member.actor.everyone?
   end
 
+  # --- Roles ----------------------------------------------------------------
+
+  test "a member is ordinary unless someone says otherwise" do
+    assert build_member.member?
+    assert members(:bob).member?
+  end
+
+  test "whoever claimed the instance owns it" do
+    assert members(:alice).owner?
+  end
+
+  test "create_first makes the owner" do
+    Member.destroy_all
+
+    member = Member.create_first(handle: "zoe", display_name: "Zoe", email_address: "zoe@example.com",
+      password: "password123", password_confirmation: "password123")
+
+    assert member.owner?
+  end
+
+  test "a member claiming an invite is ordinary, whoever invited them" do
+    member = Member.claim(invites(:open), handle: "zoe", display_name: "Zoe",
+      email_address: "zoe@example.com", password: "password123", password_confirmation: "password123")
+
+    assert member.persisted?
+    assert member.member?, "an owner's invitee does not inherit the owner's rank"
+  end
+
+  test "roles rank, so a higher role carries the powers of a lower one" do
+    assert members(:alice).moderates?
+    assert members(:alice).administers?
+    assert members(:ada).moderates?
+    refute members(:mo).administers?
+    refute members(:bob).moderates?
+  end
+
+  test "an unknown role is refused rather than raised" do
+    member = members(:bob)
+    member.role = "sysop"
+
+    refute member.valid?
+    assert_includes member.errors[:role], "is not a valid role"
+  end
+
+  test "the last owner cannot step down" do
+    owner = members(:alice)
+    owner.role = :admin
+
+    refute owner.valid?
+    assert_match "would leave Kith with no owner", owner.errors.full_messages.to_sentence
+  end
+
+  test "an owner can step down once somebody else owns the place" do
+    members(:ada).update!(role: :owner)
+
+    assert members(:alice).update(role: :admin)
+  end
+
+  test "promoting somebody to owner is not blocked by the owner who is already there" do
+    assert members(:ada).update(role: :owner)
+    assert members(:alice).reload.owner?, "Kith can hold two owners; it just cannot hold none"
+  end
+
+  # --- Invite allowance -------------------------------------------------------
+
+  test "an open invite and a claimed one both count against the allowance" do
+    # alice's fixtures: one open, one claimed, one expired-and-unclaimed.
+    assert_equal 2, members(:alice).invites_spent
+  end
+
+  test "an expired unclaimed invite costs nothing: it brought nobody in" do
+    before = members(:alice).invites_spent
+    members(:alice).issued_invites.create!(expires_at: 1.day.ago)
+
+    assert_equal before, members(:alice).reload.invites_spent
+  end
+
+  test "invites left is the allowance less what has been spent" do
+    members(:alice).update!(invite_allowance: 5)
+
+    assert_equal 3, members(:alice).invites_left
+  end
+
+  test "invites left never goes negative, however the allowance was lowered" do
+    members(:alice).update!(invite_allowance: 1)
+
+    assert_equal 0, members(:alice).invites_left
+  end
+
   test "authenticate_by verifies the password" do
     assert_equal members(:alice), Member.authenticate_by(email_address: "alice@example.com", password: "password123")
     assert_nil Member.authenticate_by(email_address: "alice@example.com", password: "wrong")

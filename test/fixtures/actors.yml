@@ -21,3 +21,15 @@ dave:
   handle: dave
   display_name: Dave Okonkwo
   discoverable: connections_only
+
+mo:
+  type: LocalActor
+  handle: mo
+  display_name: Mo Sandoval
+  discoverable: everyone
+
+ada:
+  type: LocalActor
+  handle: ada
+  display_name: Ada Whitlock
+  discoverable: everyone

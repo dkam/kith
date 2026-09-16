@@ -3,7 +3,7 @@ module Authentication
 
   included do
     before_action :require_authentication
-    helper_method :authenticated?, :current_member, :current_actor, :visibility
+    helper_method :authenticated?, :current_member, :current_actor, :visibility, :authority
   end
 
   class_methods do
@@ -32,6 +32,12 @@ module Authentication
     # Every read of anyone else's content goes through this.
     def visibility
       @visibility ||= Visibility.new(current_actor)
+    end
+
+    # Every act on somebody else's content goes through this. It asks
+    # Visibility on the way, so it can never grant a read.
+    def authority
+      @authority ||= Authority.new(current_member)
     end
 
     def require_authentication

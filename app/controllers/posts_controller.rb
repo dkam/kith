@@ -1,7 +1,8 @@
 class PostsController < ApplicationController
   allow_unauthenticated_access only: :show
   before_action :set_post, only: %i[ show edit update destroy ]
-  before_action :require_author, only: %i[ edit update destroy ]
+  before_action :require_author, only: %i[ edit update ]
+  before_action :require_permission_to_delete, only: :destroy
 
   def show
     @comments = visibility.visible_comments(@post).includes(:actor)
@@ -49,7 +50,11 @@ class PostsController < ApplicationController
     end
 
     def require_author
-      head :not_found unless @post.actor_id == current_actor&.id
+      head :not_found unless authority.edit_post?(@post)
+    end
+
+    def require_permission_to_delete
+      head :not_found unless authority.delete_post?(@post)
     end
 
     def post_params

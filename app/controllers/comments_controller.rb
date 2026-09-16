@@ -18,7 +18,8 @@ class CommentsController < ApplicationController
     end
   end
 
-  # Your own comment, or any comment on your own post.
+  # Your own comment, any comment on your own post, or — for a moderator —
+  # any comment they can already see. See Authority.
   def destroy
     @post = @comment.post
     @comment.destroy
@@ -40,8 +41,7 @@ class CommentsController < ApplicationController
     def set_comment
       comment = Comment.find(params[:id])
 
-      head :not_found and return unless visibility.comment?(comment)
-      head :not_found and return unless comment.actor_id == current_actor.id || comment.post.actor_id == current_actor.id
+      head :not_found and return unless authority.delete_comment?(comment)
 
       @comment = comment
     rescue ActiveRecord::RecordNotFound

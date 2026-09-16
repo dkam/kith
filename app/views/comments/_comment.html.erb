@@ -12,7 +12,7 @@
     <p class="comment-body mt-1"><%= comment.body %></p>
   </div>
 
-  <% if comment.actor_id == current_actor&.id || comment.post.actor_id == current_actor&.id %>
+  <% if authority.delete_comment?(comment) %>
     <%= button_to "Delete", comment_path(comment), method: :delete, class: "btn-plain shrink-0 self-start",
           form: { data: { turbo_confirm: "Delete this reply?" } } %>
   <% end %>

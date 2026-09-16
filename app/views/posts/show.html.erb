@@ -11,11 +11,13 @@
     <div class="mt-4"><%= @post.body %></div>
   <% end %>
 
-  <% if @post.actor_id == current_actor&.id %>
+  <%# A moderator is offered Delete without Edit: taking words down is a power, %>
+  <%# rewriting someone else's is not. Both answers come from Authority. %>
+  <% if authority.delete_post?(@post) %>
     <div class="mt-8 flex items-center gap-5 border-t border-rule pt-5">
-      <%= link_to "Edit", edit_post_path(@post), class: "btn-plain" %>
-      <%= button_to "Delete", @post, method: :delete, class: "btn-plain",
-            form: { data: { turbo_confirm: "Delete this post and its photos? This can't be undone." } } %>
+      <%= link_to "Edit", edit_post_path(@post), class: "btn-plain" if authority.edit_post?(@post) %>
+      <%= button_to(authority.edit_post?(@post) ? "Delete" : "Remove", @post, method: :delete, class: "btn-plain",
+            form: { data: { turbo_confirm: "Delete this post and its photos? This can't be undone." } }) %>
     </div>
   <% end %>
 </article>

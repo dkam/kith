@@ -65,6 +65,20 @@ class VisibilityTest < ActiveSupport::TestCase
     refute Visibility.new(actors(:bob).reload).post?(posts(:alice_followers))
   end
 
+  # --- A role is not a key --------------------------------------------------
+
+  # Roles live in Authority, and Authority is allowed to consult Visibility.
+  # Never the other way round. mo and ada hold the two highest ranks below the
+  # owner and follow nobody at all, so if a role ever leaks into this object
+  # they are the ones it will show something to.
+  test "a moderator sees no more than a stranger does" do
+    assert_staff_see_only_public actors(:mo)
+  end
+
+  test "an admin sees no more than a stranger does" do
+    assert_staff_see_only_public actors(:ada)
+  end
+
   # --- visible_posts must agree with post?, always --------------------------
 
   test "visible_posts agrees with post? for every actor and every post" do
@@ -247,6 +261,17 @@ class VisibilityTest < ActiveSupport::TestCase
   end
 
   private
+    def assert_staff_see_only_public(staff)
+      public_ids = Post.publicly_visible.pluck(:id).sort
+      assert_equal public_ids, Visibility.new(staff).visible_posts.pluck(:id).sort,
+        "#{staff.handle} follows nobody: a role must not widen the feed"
+
+      Post.all.each do |post|
+        assert_equal post.audience_public?, Visibility.new(staff).post?(post),
+          "#{staff.handle} was told about #{post.title || post.id} by their role"
+      end
+    end
+
     def as(fixture_name)
       Visibility.new(actors(fixture_name))
     end

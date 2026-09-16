@@ -2,13 +2,27 @@
 
 <div class="flex items-baseline justify-between">
   <h1 class="font-serif text-2xl font-semibold">Invites</h1>
-  <%= button_to "Create an invite", invites_path, class: "btn" %>
+  <%= button_to "Create an invite", invites_path, class: "btn" if authority.issue_invite? %>
 </div>
 
 <p class="mt-2 max-w-prose text-sm text-quiet">
   Each link works once and expires after <%= pluralize Invite::LIFETIME.in_days.to_i, "day" %>.
   Whoever uses it will show up as invited by you.
 </p>
+
+<%# Say which of the two limits stopped you, so nobody is left guessing why %>
+<%# the button went away. %>
+<% if (closed = current_instance.closed_because) %>
+  <p class="mt-4 max-w-prose border-l-2 border-rule pl-4 text-sm text-quiet"><%= closed %></p>
+<% elsif current_member.invites_left.zero? %>
+  <p class="mt-4 max-w-prose border-l-2 border-rule pl-4 text-sm text-quiet">
+    You have no invites left. Ask an admin for more.
+  </p>
+<% else %>
+  <p class="mt-4 text-sm text-quiet">
+    <%= pluralize current_member.invites_left, "invite" %> left.
+  </p>
+<% end %>
 
 <% if @invites.any? %>
   <ul class="mt-8 divide-y divide-rule border-t border-rule">

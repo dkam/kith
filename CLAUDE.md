@@ -7,6 +7,10 @@ It will **later** federate with other Kith instances (and read RSS / Mastodon),
 so the schema must not assume everything is local — but **do not build
 federation now**. Leave the seams; don't build the bridge.
 
+The brief this was built from is kept verbatim in `docs/foundation.md`. This
+file is the living version of it: where the two disagree, this one wins, and
+*"Deviations from the original brief, and why"* below says what moved.
+
 ---
 
 ## Stack (fixed — do not substitute)
@@ -56,6 +60,17 @@ These are design decisions, not suggestions.
   stored, so every process agrees on it and it is never written down. See
   `Setup`. `rake kith:first_member` still works for a headless install, and
   `rake kith:setup_code` reprints the code.
+- **Two limits on how Kith grows, and they are not the same question.**
+  `members.invite_allowance` is the soft one: how many people any one member
+  may bring in, so growth stays spread out. `instances.invites_open` and
+  `instances.member_cap` are the hard ones, and either **overrides every
+  allowance, an admin's and the owner's included** — otherwise "no more
+  members" would only mean "no more members except the people who decide".
+  A closed or full instance also **stops invites that are already out there**:
+  if it did not, a cap would not be a cap. Set from the console — `kith:invites`
+  reports, `kith:door`, `kith:member_cap` and `kith:allowance` change.
+  An invite that expired unclaimed costs nothing against an allowance: it
+  brought nobody in and now never will.
 - **No reposting or boosting of any kind. No likes.** No algorithmic feed —
   strictly reverse-chronological.
 - **Follows are directed.** `A follows B` is one edge with states
@@ -88,7 +103,9 @@ Integer primary keys. Don't reach for UUIDs.
   `public_key`, `private_key` (local only, encrypted), `discoverable`.
   Everything that can author or be followed is an actor, local or not.
 - **`members`** — credentials and email; `belongs_to :actor`. Local members
-  always have an actor; remote actors never have a member.
+  always have an actor; remote actors never have a member. `role` is the
+  ranked enum `member` / `moderator` / `admin` / `owner` — see `Authority` —
+  and `invite_allowance` is how many people they may bring in.
 - **`posts`** — `belongs_to :actor`; `title` (optional), `audience` enum,
   `published_at`, `uri` (nullable now; will hold the ActivityPub id), `remote`
   boolean. The body is **not** a column: `has_rich_text :body` puts it in
@@ -104,6 +121,9 @@ Integer primary keys. Don't reach for UUIDs.
   reader's unread state.
 - **`notifications`** — `member_id`, `actor_id`, `subject` (polymorphic),
   `kind`, `read_at`.
+- **`instances`** — one row, always (`Instance.current`): `invites_open`,
+  `member_cap`. This Kith's own settings. The instance's name, description and
+  its own actor will live here when federation needs them.
 
 ### Deviations from the original brief, and why
 
@@ -118,6 +138,14 @@ Integer primary keys. Don't reach for UUIDs.
   columns have nothing left to say. Photographs moved with it: they were a
   `has_many_attached :photos` tray under the post, and are now embedded in the
   body, which is why `Post#photos` reads `body.embeds_attachments`.
+- `members.role` was added, and is not in the brief at all. It is the smallest
+  thing that answers "who may take a post down" without a roles table, a
+  permissions table and a gem: one ranked integer, four values, and a policy
+  object beside `Visibility` rather than a branch inside it.
+- `instances` and `members.invite_allowance` were added. The brief said invites
+  expire and are single-use but never said how many, which is fine until the
+  day you want to stop. Two knobs rather than one because "slow down" and
+  "we're full" are different sentences.
 - `feed_items.posted_at` was added, copied from the post. The feed is ordered by
   when something was *written*, not by when it was fanned out — otherwise
   back-filling an accepted follow drops old posts at the top of the reader's
@@ -182,6 +210,48 @@ come to hold different opinions about the same post.
 it. There is no second path. Cover it thoroughly with tests — this is the
 privacy model, and a bug here is the whole product failing.
 
+### Roles are a separate question, and `Authority` answers it
+
+`Visibility` answers *"is this viewer in the audience?"* — a relation between
+two people. `Authority` answers *"may this person act on the instance?"* — a
+capability that comes from their role. They are two objects on purpose, because
+of one rule:
+
+**A role never widens `Visibility`.** An admin reads exactly the feed an
+ordinary member reads. The dependency runs one way only: `Authority` asks
+`Visibility`, and `Visibility` has never heard of a role. The moment
+`Visibility#post?` grows an `|| admin?`, the privacy model is gone and nobody
+notices for a year. `VisibilityTest` keeps two fixtures — `mo` and `ada` — who
+hold rank and follow nobody, purely to assert they see no more than a stranger.
+
+Which is also why **moderation is gated on seeing**: `Authority#delete_post?`
+checks `visibility.post?` before it checks the rank, so a moderator may take
+down a post that is already in front of them and nothing else. Moderation is
+not a way *in*.
+
+Four ranked roles on `members.role`, each carrying what the one below it
+carries, with gaps in the integers for a rank we have not needed yet:
+
+- **`member`** (0, default) — their own posts, comments, invites and settings.
+- **`moderator`** (5) — + delete anyone's post or comment *that they can see*.
+  Not edit: taking someone's words down is a power, rewriting them under their
+  own name is not.
+- **`admin`** (10) — + hand out roles below their own.
+- **`owner`** (20) — + hand out admin. Whoever claimed the instance
+  (`Member.create_first`). Kith can hold two owners; it cannot hold none, so
+  the last owner cannot step down.
+
+Ask `moderates?` / `administers?`, never `admin?` — a check written against one
+exact role is a check that forgets everyone above it. Roles live on `members`,
+not `actors`, because only local people have credentials: a remote actor holds
+no rank here, ever.
+
+There is no admin UI. Roles are set from the console, like the setup code:
+`kith:roles` lists them, `kith:role[email,moderator]` changes one. The rake
+task goes around `Authority` deliberately — reading the server's console is
+already the highest credential this instance has, and `Authority` guards what
+members do to *each other* through the app.
+
 Two habits that fall out of it:
 
 - **404, never 403**, for anything the viewer may not see — a post, a profile, a
@@ -228,6 +298,12 @@ bin/rubocop            # rails-omakase
 bin/brakeman           # security scan
 bin/rails kith:first_member[email,handle,name]
 bin/rails kith:setup_code   # reprint the setup code, while nobody has joined
+bin/rails kith:roles        # who holds which rank
+bin/rails kith:role[email,moderator]   # member | moderator | admin | owner
+bin/rails kith:invites      # the door, the cap, everyone's allowance
+bin/rails kith:door[closed] # open | closed
+bin/rails kith:member_cap[40]          # pass nothing to lift it
+bin/rails kith:allowance[email,10]
 bin/build              # build + push the image, and tag the release
 ```
 

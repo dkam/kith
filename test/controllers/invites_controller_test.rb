@@ -44,6 +44,42 @@ class InvitesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "a member at their allowance is refused a new invite" do
+    members(:alice).update!(invite_allowance: members(:alice).invites_spent)
+
+    assert_no_difference -> { Invite.count } do
+      post invites_url
+    end
+
+    assert_redirected_to invites_url
+  end
+
+  test "no invite button once the allowance is spent" do
+    members(:alice).update!(invite_allowance: members(:alice).invites_spent)
+
+    get invites_url
+    assert_select "form[action=?]", invites_path, false
+  end
+
+  test "a closed instance refuses invites from the owner" do
+    Instance.current.update!(invites_open: false)
+
+    assert_no_difference -> { Invite.count } do
+      post invites_url
+    end
+
+    get invites_url
+    assert_select "form[action=?]", invites_path, false
+    assert_match "Invites are closed", response.body
+  end
+
+  test "a full instance says so" do
+    Instance.current.update!(member_cap: Member.count)
+
+    get invites_url
+    assert_match "Kith is full", response.body
+  end
+
   test "invites require signing in" do
     sign_out
     get invites_url

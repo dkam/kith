@@ -108,6 +108,56 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "The long way round", target.reload.title
   end
 
+  # --- Moderation ---
+
+  test "a moderator can delete a post they can see" do
+    sign_in_as members(:mo)
+
+    assert_difference -> { Post.count }, -1 do
+      delete post_url(posts(:alice_public))
+    end
+
+    assert_redirected_to root_url
+  end
+
+  test "a moderator cannot delete a post they cannot see" do
+    sign_in_as members(:mo)
+
+    assert_no_difference -> { Post.count } do
+      delete post_url(posts(:alice_followers))
+    end
+
+    assert_response :not_found
+  end
+
+  test "a moderator cannot edit someone else's post" do
+    sign_in_as members(:mo)
+
+    get edit_post_url(posts(:alice_public))
+    assert_response :not_found
+
+    patch post_url(posts(:alice_public)), params: { post: { title: "Rewritten by mo" } }
+    assert_response :not_found
+
+    assert_equal "On keeping a notebook", posts(:alice_public).reload.title
+  end
+
+  test "an ordinary member is offered no delete button on someone else's post" do
+    sign_in_as members(:dave)
+    get post_url(posts(:alice_public))
+
+    assert_select "a[href=?]", edit_post_path(posts(:alice_public)), false
+    assert_select "form[action=?]", post_path(posts(:alice_public)), false
+  end
+
+  test "a moderator is offered delete but not edit on someone else's post" do
+    sign_in_as members(:mo)
+    get post_url(posts(:alice_public))
+
+    assert_select "a[href=?]", edit_post_path(posts(:alice_public)), false
+    assert_select "form[action=?]", post_path(posts(:alice_public))
+  end
+
   # --- Permalinks go through Visibility, like everything else ---
 
   test "a follower can read a followers-only permalink" do
