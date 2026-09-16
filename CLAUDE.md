@@ -30,6 +30,9 @@ Beyond the Rails defaults, only:
 
 - `image_processing` — Active Storage variants, EXIF stripping.
 - `commonmarker` — Markdown rendering (approved 2026-09-16).
+- `json` pinned to `~> 2.7` — Ruby 4.0 ships json 3.x as a default gem, and its
+  `JSON.parse` arity change breaks `ActiveSupport::JSON.decode`, which every
+  signed cookie goes through. Remove the pin when Rails supports json 3.
 
 **Ask before adding any other gem.**
 
@@ -100,6 +103,10 @@ Integer primary keys. Don't reach for UUIDs.
   point at a `Follow` subject and are otherwise indistinguishable.
 - `posts.body_html` was added. Rendering Markdown server-side at write time, per
   the brief, means storing the result.
+- `feed_items.posted_at` was added, copied from the post. The feed is ordered by
+  when something was *written*, not by when it was fanned out — otherwise
+  back-filling an accepted follow drops old posts at the top of the reader's
+  page.
 
 ---
 
@@ -115,7 +122,17 @@ Integer primary keys. Don't reach for UUIDs.
   exists.
 - Variants (`thumb`, `feed`, `full`) are generated and served through the same
   controller.
-- **Strip EXIF on upload, including GPS.**
+- Attachments get their **own** opaque signed id, from `AttachableMedia`.
+  `ActiveStorage::Attachment#signed_id` is delegated to the blob, which
+  identifies the *file* rather than the attachment hanging it off a particular
+  post — and visibility is a property of the attachment.
+- **Strip EXIF on upload, including GPS**, in two layers: every variant is
+  re-encoded by vips with metadata stripped, and `StripMetadataJob` rewrites the
+  original behind it (direct upload means the original is in storage before the
+  form is submitted). Upright the image *before* stripping, or the rotation flag
+  goes with everything else.
+- `MediaHelper` is the only thing in the app that turns an attachment into a
+  `src`. Keep it that way.
 
 ---
 
@@ -127,9 +144,23 @@ A single policy object, `Visibility`, answers:
 - can actor X see actor Y's profile link?
 - can actor X see comment C?
 
+It answers in two shapes — a predicate for one record (`post?`, `comment?`) and
+a scope for many (`visible_posts`, `visible_comments`). The tests assert the two
+can never diverge, by cross-checking every actor against every post and comment
+in the fixture graph. That pair drifting apart is how a feed and a permalink
+come to hold different opinions about the same post.
+
 **Every** feed, comment, notification, media and permalink query goes through
 it. There is no second path. Cover it thoroughly with tests — this is the
 privacy model, and a bug here is the whole product failing.
+
+Two habits that fall out of it:
+
+- **404, never 403**, for anything the viewer may not see — a post, a profile, a
+  photo. A 403 confirms the thing exists. The tests assert that "hidden" and
+  "does not exist" return the *same* status.
+- **Counts are disclosures too.** A reply count, an unread badge: derive them
+  from the visible set, not from the table.
 
 ---
 
@@ -139,7 +170,11 @@ privacy model, and a bug here is the whole product failing.
 - Tests for every model rule, exhaustive tests for `Visibility`, and system
   tests for the invite → post → follow → comment happy path.
 - Views are plain Tailwind: quiet, text-first, generous whitespace, reader-like.
-  **No component library.**
+  **No component library.** Shared classes (`.field`, `.btn`, `.prose-kith`) are
+  defined with `@apply` in `app/assets/tailwind/application.css` so the views
+  stay readable.
+- A name is rendered by `shared/_actor_name`, the only place that decides
+  whether a name is a link — and it asks `Visibility`.
 - Use `bin/rails` generators where sensible; delete what they scaffold that we
   don't need.
 - CI runs tests, system tests, brakeman, and rubocop-rails-omakase. Keep it
@@ -149,7 +184,7 @@ privacy model, and a bug here is the whole product failing.
 
 ```
 bin/setup              # install, prepare databases, seed nothing
-bin/dev                # Procfile.dev — server + tailwind watch
+bin/dev                # Procfile.dev — server + tailwind watch + solid_queue
 bin/rails test         # unit + integration
 bin/rails test:system  # headless Chrome
 bin/rubocop            # rails-omakase
@@ -177,3 +212,28 @@ bin/rails kith:first_member[email,handle,name]
 
 **Not in phase 1**: federation, ActivityPub, RSS ingest, circles, likes,
 passkeys, search, DMs.
+
+---
+
+## Things that will bite you
+
+- **Development runs the same four SQLite files as production**, and the same
+  solid_queue / solid_cache / solid_cable stores. Jobs do not run unless
+  something is working the queue: use `bin/dev`, not a bare `bin/rails server`,
+  or posts will never reach anyone's feed.
+- **Links inside a Turbo Frame navigate within the frame.** The feed's
+  pagination frame sets `target="_top"` for exactly this reason; without it,
+  clicking a post title renders the permalink inside the feed.
+- **System tests hand the browser a session cookie** rather than driving the
+  sign-in form (`sign_in_as`). `HappyPathTest` signs in through the real form
+  once, with a password, from an invite — that is where form sign-in is covered.
+  Driving it at the top of every scenario made the suite depend on headless
+  Chrome reliably accepting keystrokes into a password field, which it does not:
+  dropped keystrokes left `required` fields empty, HTML5 validation then blocked
+  submission silently, and it looked like a sign-in that produced no request.
+- **Selenium clicks by coordinate.** `ApplicationSystemTestCase#visit` waits for
+  the stylesheet to apply before returning, because a late layout shift makes
+  clicks miss.
+- **Only ever run one test process against `storage/test.sqlite3` at a time.**
+  A second one produces `SQLite3::BusyException` that surfaces as unrelated,
+  baffling failures five seconds later.
