@@ -3,6 +3,12 @@
     <%= render "comments/comment", comment: @comment %>
   <% end %>
 
+  <%# The count is part of the reply landing, and is counted the same way the
+      list is: from what this viewer may see. %>
+  <%= turbo_stream.replace dom_id(@post, :comments_heading) do %>
+    <%= render "comments/heading", post: @post, count: visibility.visible_comments(@post).size %>
+  <% end %>
+
   <%# A fresh, empty form: the reply has landed, so the box should be ready for
       the next thought rather than still holding the last one. %>
   <%= turbo_stream.replace dom_id(@post, :comment_form) do %>

@@ -9,7 +9,10 @@
   </div>
 <% end %>
 
-<%= turbo_frame_tag "feed-page-#{params[:before] || "first"}" do %>
+<%# target _top: the frame exists to append pages, not to capture navigation.
+    Without it, clicking a post title would render the permalink *inside* the
+    feed. %>
+<%= turbo_frame_tag "feed-page-#{params[:before] || "first"}", target: "_top" do %>
   <% if @items.any? %>
     <div class="divide-y divide-rule" data-controller="reader">
       <% @items.each do |item| %>
@@ -18,7 +21,7 @@
     </div>
 
     <% if @more %>
-      <%= turbo_frame_tag "feed-page-#{@next_cursor}", src: root_path(before: @next_cursor), loading: :lazy do %>
+      <%= turbo_frame_tag "feed-page-#{@next_cursor}", src: root_path(before: @next_cursor), loading: :lazy, target: "_top" do %>
         <p class="py-8 text-center text-sm text-quiet">Loading more…</p>
       <% end %>
     <% else %>

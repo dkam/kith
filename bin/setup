@@ -12,17 +12,37 @@ FileUtils.chdir APP_ROOT do
   # This script is idempotent, so that you can run it at any time and get an expectable outcome.
   # Add necessary setup steps to this file.
 
-  puts "== Installing dependencies =="
+  puts "== Checking for libvips =="
+  unless system("vips --version", out: File::NULL, err: File::NULL)
+    abort <<~MESSAGE
+      libvips is missing. Kith needs it to build image variants and to strip
+      EXIF from uploads.
+
+        macOS:  brew install vips
+        Debian: sudo apt-get install libvips
+
+    MESSAGE
+  end
+
+  puts "\n== Installing dependencies =="
   system("bundle check") || system!("bundle install")
 
-  # puts "\n== Copying sample files =="
-  # unless File.exist?("config/database.yml")
-  #   FileUtils.cp "config/database.yml.sample", "config/database.yml"
-  # end
-
-  puts "\n== Preparing database =="
+  puts "\n== Preparing databases =="
   system! "bin/rails db:prepare"
   system! "bin/rails db:reset" if ARGV.include?("--reset")
+
+  if `bin/rails runner "print Member.exists?"`.strip == "false"
+    puts <<~MESSAGE
+
+      == No members yet ==
+
+      There is no public sign up. Create the first member, who is the only one
+      without an inviter, and invite everyone else from inside the app:
+
+        bin/rails "kith:first_member[you@example.com,yourhandle,Your Name]"
+
+    MESSAGE
+  end
 
   puts "\n== Removing old logs and tempfiles =="
   system! "bin/rails log:clear tmp:clear"

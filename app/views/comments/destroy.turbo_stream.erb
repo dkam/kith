@@ -1,1 +1,5 @@
 <%= turbo_stream.remove dom_id(@comment) %>
+
+<%= turbo_stream.replace dom_id(@post, :comments_heading) do %>
+  <%= render "comments/heading", post: @post, count: visibility.visible_comments(@post).size %>
+<% end %>

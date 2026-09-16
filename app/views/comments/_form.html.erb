@@ -2,7 +2,7 @@
   <%= avatar_tag current_actor, css_class: "size-8 rounded-full object-cover bg-rule shrink-0" %>
 
   <div class="min-w-0 flex-1">
-    <%= form.label :body, "Reply", class: "sr-only" %>
+    <%= form.label :body, "Your reply", class: "sr-only" %>
     <%= form.text_area :body, rows: 2, class: "field", placeholder: "Say something",
           data: { controller: "autogrow", action: "input->autogrow#resize" } %>
 
