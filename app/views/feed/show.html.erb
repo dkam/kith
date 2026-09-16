@@ -1,1 +1,30 @@
-<h1 class="font-serif text-2xl font-semibold">Your feed</h1>
+<% unless turbo_frame_request? %>
+  <% content_for :title, "Feed" %>
+
+  <div class="flex items-baseline justify-between">
+    <h1 class="font-serif text-2xl font-semibold">Feed</h1>
+    <% if current_member.feed_items.unread.exists? %>
+      <%= button_to "Mark all read", read_all_feed_items_path, class: "btn-plain" %>
+    <% end %>
+  </div>
+<% end %>
+
+<%= turbo_frame_tag "feed-page-#{params[:before] || "first"}" do %>
+  <% if @items.any? %>
+    <div class="divide-y divide-rule" data-controller="reader">
+      <% @items.each do |item| %>
+        <%= render "feed/item", item: item %>
+      <% end %>
+    </div>
+
+    <% if @more %>
+      <%= turbo_frame_tag "feed-page-#{@next_cursor}", src: root_path(before: @next_cursor), loading: :lazy do %>
+        <p class="py-8 text-center text-sm text-quiet">Loading more…</p>
+      <% end %>
+    <% else %>
+      <p class="py-8 text-center text-sm text-hush">That's everything.</p>
+    <% end %>
+  <% elsif params[:before].blank? %>
+    <%= render "feed/empty" %>
+  <% end %>
+<% end %>

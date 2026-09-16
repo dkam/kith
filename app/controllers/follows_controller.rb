@@ -21,6 +21,7 @@ class FollowsController < ApplicationController
     head :not_found and return unless @follow.followed_actor_id == current_actor.id
 
     @follow.accept!
+    FanOutJob.perform_later(@follow)
 
     @actor = @follow.follower_actor
     respond_with_request_row

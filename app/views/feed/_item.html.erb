@@ -1,0 +1,12 @@
+<div id="<%= dom_id item %>"
+     class="relative <%= "kith-unread" unless item.read? %>"
+     data-reader-target="item"
+     <%= "data-feed-item-url=#{feed_item_path(item)}" unless item.read? %>>
+  <% unless item.read? %>
+    <span data-reader-target="marker"
+          class="absolute -left-4 top-9 size-1.5 rounded-full bg-accent"
+          aria-label="Unread"></span>
+  <% end %>
+
+  <%= render "posts/post", post: item.post %>
+</div>

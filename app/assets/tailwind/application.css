@@ -59,6 +59,11 @@
     @apply text-sm text-quiet underline hover:text-ink cursor-pointer;
   }
 
+  /* An unread post. Quiet: a hairline down the left margin, not a highlight. */
+  .kith-unread {
+    @apply -ml-4 border-l-2 border-accent/40 pl-[calc(1rem-2px)];
+  }
+
   /* Rendered Markdown post bodies. Text first: comfortable measure, generous
      leading, restrained headings. */
   .prose-kith {

@@ -12,12 +12,15 @@ class Post < ApplicationRecord
   belongs_to :actor
 
   has_many :comments, -> { chronological }, dependent: :destroy
+  has_many :feed_items, dependent: :delete_all
 
   has_many_attached :photos
 
   scope :newest_first, -> { order(published_at: :desc, id: :desc) }
   scope :by, ->(actors) { where(actor: actors) }
   scope :publicly_visible, -> { where(audience: :public) }
+
+  after_create_commit :fan_out
 
   before_validation :set_published_at, on: :create
   before_validation :render_body
@@ -50,6 +53,10 @@ class Post < ApplicationRecord
   def leaves_the_instance? = audience_public?
 
   private
+    def fan_out
+      FanOutJob.perform_later(self)
+    end
+
     def set_published_at
       self.published_at ||= Time.current
     end

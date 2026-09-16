@@ -10,6 +10,7 @@ class Member < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :issued_invites, class_name: "Invite", foreign_key: :inviter_member_id, dependent: :destroy
   has_one :claimed_invite, class_name: "Invite", foreign_key: :claimed_by_member_id, dependent: :nullify
+  has_many :feed_items, dependent: :delete_all
   has_many :invited_members, class_name: "Member", foreign_key: :inviter_member_id, dependent: :nullify
 
   accepts_nested_attributes_for :actor
