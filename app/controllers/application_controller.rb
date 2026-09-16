@@ -8,7 +8,15 @@ class ApplicationController < ActionController::Base
 
   helper_method :current_instance
 
+  before_action :identify_for_error_reporting
+
   private
+    # Which member a crash report belongs to, when there is a reporter to tell
+    # and a member to name. ErrorReport decides how much of them goes.
+    def identify_for_error_reporting
+      Sentry.set_user(ErrorReport.identity(current_member)) if Sentry.initialized? && current_member
+    end
+
     # This Kith's own settings — the door, and the cap on it. One read a
     # request, shared by Authority, the controllers and the views.
     def current_instance

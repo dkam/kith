@@ -55,6 +55,24 @@ bin/rails kith:setup_code   # reprints the code, while setup is still open
 matters: posts reach people's feeds through a background job, so a bare
 `bin/rails server` will look like nothing is happening.
 
+## Error reporting (optional)
+
+Nothing is reported unless you ask for it. Set `SENTRY_DSN` and Kith sends
+crashes to any Sentry-compatible server — ours is a self-hosted
+[Splat](https://github.com/dkam/splat) at `splat.apps.aapamilne.com`. Create a
+project there, press **Copy External DSN**, and pass it to the container:
+
+```sh
+SENTRY_DSN=https://<public-key>@splat.apps.aapamilne.com/<project-id>
+SENTRY_TRACES_SAMPLE_RATE=0.1   # optional; tracing is off by default
+```
+
+Kith is a private network, so a crash report is an export, and one object
+decides what may be in it. `ErrorReport` strips invite codes, password-reset
+tokens, signed attachment ids and handles out of both the URL and the `Referer`
+header, and a member arrives as an integer id and nothing else. `CLAUDE.md` has
+the full rule. Tests never report, whatever the environment says.
+
 ## Checks
 
 ```sh

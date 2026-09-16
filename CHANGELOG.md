@@ -20,6 +20,16 @@ stay in `CLAUDE.md`.
   in development only. Both are shown at the foot of the settings page, so
   "is the thing I deployed the thing that's running?" has an answer that does
   not involve trusting an image tag.
+- **Optional error reporting.** Set `SENTRY_DSN` and crashes go to a
+  Sentry-compatible server; leave it unset and there is no client, no network
+  and nothing to configure. Because Kith is private, a crash report is an
+  export: `ErrorReport` is the one object that decides what may be in one, and
+  every event passes through it. It strips invite codes, password-reset tokens,
+  signed attachment ids and handles out of the URL *and* out of the `Referer`
+  header — which is in neither of sentry-ruby's PII denylists, so a link
+  followed off `/join/<code>` would otherwise carry that code out in the header
+  of whatever broke next. A member is sent as an integer id and nothing else.
+  Tests never report, whatever the environment says.
 - **`bin/build`** builds and pushes the production image, tagged `:vX.Y.Z`,
   `:<sha>` and — for a real release from `main` — `:latest`, then creates the
   matching git tag in the same run. A pre-release (any version with a hyphen)

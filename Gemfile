@@ -48,6 +48,10 @@ gem "image_processing", "~> 1.2"
 # Rich text editor for Action Text, built on Lexical [https://lexxy.dev]
 gem "lexxy", "~> 0.9.32"
 
+# Optional error reporting. Inert unless SENTRY_DSN is set — see ErrorReport,
+# which decides what is allowed to leave the instance in a crash report.
+gem "sentry-rails"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"

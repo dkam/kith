@@ -41,6 +41,9 @@ Beyond the Rails defaults, only:
 - `json` pinned to `~> 2.7` — Ruby 4.0 ships json 3.x as a default gem, and its
   `JSON.parse` arity change breaks `ActiveSupport::JSON.decode`, which every
   signed cookie goes through. Remove the pin when Rails supports json 3.
+- `sentry-rails` — optional error reporting (approved 2026-09-16). Inert unless
+  `SENTRY_DSN` is set; what may leave is `ErrorReport`'s decision. See
+  *"Error reporting"* below.
 
 **Ask before adding any other gem.**
 
@@ -259,6 +262,59 @@ Two habits that fall out of it:
   "does not exist" return the *same* status.
 - **Counts are disclosures too.** A reply count, an unread badge: derive them
   from the visible set, not from the table.
+
+---
+
+## Error reporting
+
+Optional, and off unless `SENTRY_DSN` is set: no DSN, no client, no network.
+The DSN points at a **Splat** instance — ours is `splat.apps.aapamilne.com` —
+which speaks the Sentry protocol. Create a project there, press *Copy External
+DSN*, and hand it to the container as `SENTRY_DSN`.
+
+**A crash report is an export.** Kith is a private network, so this is the same
+question `Visibility` answers, asked about a different reader, and it gets the
+same treatment: one object decides, and there is no second path. That object is
+`ErrorReport`, and every event goes through it via `before_send` and
+`before_send_transaction`.
+
+Four of Kith's URLs carry something that must not travel, and Sentry attaches
+the URL to everything:
+
+| | |
+|---|---|
+| `/join/:code` | a live invite — a credential, still spendable |
+| `/passwords/:token/edit` | a password reset — a credential, still usable |
+| `/media/:signed_id/:variant` | the permission to read one photograph |
+| `/@:handle` | a person's name |
+
+**The same strings arrive a second way, and this is the half that is easy to
+miss:** `Referer` is in neither of sentry-ruby's PII denylists, so following a
+link off `/join/<code>` carries that code out in the header of whatever breaks
+next. `ErrorReport` scrubs both doors with the same rules. This is the media
+rule wearing a different coat — an opaque id is only opaque until it is written
+down somewhere else.
+
+What is *kept* is deliberate too: the variant (`thumb`/`feed`/`full`) is not a
+secret and says which size broke, and `/passwords/new` is the form rather than
+a token, so blanking it would throw away which page failed for nothing.
+
+`config.send_default_pii = false` does the rest — with it off, sentry-ruby 7
+sends no request body, no cookies, no caller IP, no SQL bind values and no
+query string. Breadcrumbs are limited to `:http_logger`; Kith's own logs carry
+handles and titles. Tracing is off unless `SENTRY_TRACES_SAMPLE_RATE` is set.
+
+The one thing about a member that *is* sent is `ErrorReport.identity` — their
+id, as an integer, and nothing else. "Is this one person or everybody?" is the
+first question anybody asks about an error; a handle answers it no better and
+names somebody in the process.
+
+**Tests never report**, whatever the environment says — the initializer checks
+`Rails.env.test?` as well as the DSN, because CI is exactly where a stray DSN
+turns up. `ErrorReportingTest` boots a real second process to prove it, since a
+boot with `SENTRY_DSN` set is a boot nothing else performs: the first version
+of the initializer read an autoloaded constant and raised on exactly that boot,
+with a green suite either side of it.
 
 ---
 
