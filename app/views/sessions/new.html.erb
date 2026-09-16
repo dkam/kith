@@ -4,6 +4,14 @@
   <h1 class="font-serif text-3xl font-semibold">Kith</h1>
   <p class="mt-2 text-sm text-quiet">A quiet place for a few dozen friends. Invite only.</p>
 
+  <% if Setup.open? %>
+    <p class="mt-4 text-sm text-quiet">
+      Nobody has joined yet.
+      <%= link_to "Set up Kith", setup_path, class: "text-accent" %>
+      with the code on the server's console.
+    </p>
+  <% end %>
+
   <%= form_with url: session_path, class: "mt-8 space-y-5" do |form| %>
     <div>
       <%= form.label :email_address, "Email", class: "label" %>

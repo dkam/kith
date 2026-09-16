@@ -4,6 +4,11 @@ Rails.application.routes.draw do
   resource :session, only: %i[ new create destroy ]
   resources :passwords, param: :token, only: %i[ new create edit update ]
 
+  # The first member can't be invited, so while the instance is empty the
+  # server's console issues the credential instead. 404s afterwards: see Setup.
+  get  "setup", to: "setup#new"
+  post "setup", to: "setup#create"
+
   # There is no public sign up: joining always goes through an invite code.
   get  "join/:code", to: "registrations#new", as: :join
   post "join/:code", to: "registrations#create"

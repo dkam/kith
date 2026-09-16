@@ -44,4 +44,24 @@ class Member < ApplicationRecord
 
     member
   end
+
+  # The other way in, and only while nobody has taken it: whoever can read the
+  # setup code off the server's console. The first member has no inviter.
+  #
+  # The emptiness check and the insert are not atomic — SQLite has no row to
+  # lock before the first one exists — but the only person who can lose that
+  # race is someone who already holds the console code, which is to say the
+  # operator, twice.
+  def self.create_first(handle:, display_name:, email_address:, password:, password_confirmation:)
+    member = new(email_address:, password:, password_confirmation:)
+    member.build_actor(type: "LocalActor", handle: handle, display_name: display_name.presence || handle, discoverable: :everyone)
+
+    if exists?
+      member.errors.add(:base, "Kith already has a member. Ask them for an invite.")
+    else
+      member.save
+    end
+
+    member
+  end
 end

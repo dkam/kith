@@ -43,8 +43,15 @@ Beyond the Rails defaults, only:
 These are design decisions, not suggestions.
 
 - **Invite-only. No public signup.** An invite is single-use, expires, and
-  records who issued it. Every member has an inviter except the first, who is
-  created by `rake kith:first_member`.
+  records who issued it. Every member has an inviter except the first.
+- **The first member claims the instance from the console.** While no member
+  exists, every boot prints a setup code and `/setup` accepts it; the moment
+  one member exists the code stops being printed and `/setup` returns 404.
+  Being able to read the server's console is the only credential that exists
+  before anybody has joined. The code is derived from `secret_key_base`, not
+  stored, so every process agrees on it and it is never written down. See
+  `Setup`. `rake kith:first_member` still works for a headless install, and
+  `rake kith:setup_code` reprints the code.
 - **No reposting or boosting of any kind. No likes.** No algorithmic feed —
   strictly reverse-chronological.
 - **Follows are directed.** `A follows B` is one edge with states
@@ -199,6 +206,7 @@ bin/rails test:system  # headless Chrome
 bin/rubocop            # rails-omakase
 bin/brakeman           # security scan
 bin/rails kith:first_member[email,handle,name]
+bin/rails kith:setup_code   # reprint the setup code, while nobody has joined
 ```
 
 ---
@@ -206,8 +214,9 @@ bin/rails kith:first_member[email,handle,name]
 ## Phase 1 scope — build exactly this, then stop
 
 1. App skeleton, `bin/setup`, `Procfile.dev`, CI.
-2. Authentication, invites (issue, claim, expire), first-member rake task,
-   profile settings (display name, avatar, discoverable).
+2. Authentication, invites (issue, claim, expire), first member from the
+   console setup code (and the rake task), profile settings (display name,
+   avatar, discoverable).
 3. Posts: create/edit/delete, title, Markdown body, multiple photos
    (drag-and-drop via Stimulus + direct upload), audience selector, permalink.
 4. Follows: request, accept, reject, unfollow, follow back, with Turbo Stream

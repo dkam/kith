@@ -1,0 +1,64 @@
+<% content_for :title, "Set up Kith" %>
+
+<div class="mx-auto max-w-sm">
+  <h1 class="font-serif text-3xl font-semibold">Set up Kith</h1>
+  <p class="mt-2 text-sm text-quiet">
+    Nobody has joined yet. The code below is printed on the server's console —
+    enter it here and this becomes your account. Everyone after you arrives by
+    invitation.
+  </p>
+
+  <%= form_with model: @member, url: setup_path, class: "mt-8 space-y-5" do |form| %>
+    <% if @member.errors.any? %>
+      <div class="alert">
+        <ul class="list-disc space-y-1 pl-4">
+          <% @member.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div>
+      <%= label_tag :code, "Setup code", class: "label" %>
+      <%= text_field_tag :code, params[:code], required: true, autofocus: true, autocomplete: "off",
+            spellcheck: false, autocapitalize: "characters", class: "field uppercase tracking-[0.18em]" %>
+      <p class="hint">Twelve characters, in three groups. Case and dashes don't matter.</p>
+    </div>
+
+    <%= form.fields_for :actor do |actor_form| %>
+      <div>
+        <%= actor_form.label :handle, "Handle", class: "label" %>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-quiet">@</span>
+          <%= actor_form.text_field :handle, required: true, autocomplete: "off", class: "field" %>
+        </div>
+        <p class="hint">Lowercase letters, numbers and underscores. You can't change this later.</p>
+      </div>
+
+      <div class="mt-5">
+        <%= actor_form.label :display_name, "Name", class: "label" %>
+        <%= actor_form.text_field :display_name, autocomplete: "name", class: "field" %>
+        <p class="hint">What your friends call you. You can change this whenever.</p>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.label :email_address, "Email", class: "label" %>
+      <%= form.email_field :email_address, required: true, autocomplete: "username", class: "field" %>
+    </div>
+
+    <div>
+      <%= form.label :password, "Password", class: "label" %>
+      <%= form.password_field :password, required: true, autocomplete: "new-password", maxlength: 72, class: "field" %>
+      <p class="hint">At least eight characters.</p>
+    </div>
+
+    <div>
+      <%= form.label :password_confirmation, "Confirm password", class: "label" %>
+      <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password", maxlength: 72, class: "field" %>
+    </div>
+
+    <%= form.submit "Set up Kith", class: "btn" %>
+  <% end %>
+</div>

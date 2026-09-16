@@ -29,6 +29,26 @@ class MemberTest < ActiveSupport::TestCase
     assert_equal members(:alice), members(:bob).inviter_member
   end
 
+  test "create_first refuses to run twice" do
+    member = Member.create_first(handle: "zoe", display_name: "Zoe", email_address: "zoe@example.com",
+      password: "password123", password_confirmation: "password123")
+
+    assert_not member.persisted?
+    assert_match "already has a member", member.errors.full_messages.to_sentence
+  end
+
+  test "create_first makes an inviterless member, discoverable by everyone" do
+    Member.destroy_all
+
+    member = Member.create_first(handle: "zoe", display_name: nil, email_address: "zoe@example.com",
+      password: "password123", password_confirmation: "password123")
+
+    assert member.persisted?
+    assert_nil member.inviter_member
+    assert_equal "zoe", member.display_name, "a blank name falls back to the handle"
+    assert member.actor.everyone?
+  end
+
   test "authenticate_by verifies the password" do
     assert_equal members(:alice), Member.authenticate_by(email_address: "alice@example.com", password: "password123")
     assert_nil Member.authenticate_by(email_address: "alice@example.com", password: "wrong")
