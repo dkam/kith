@@ -1,0 +1,31 @@
+# alice <-> bob: a connection (mutual, both accepted)
+alice_follows_bob:
+  follower_actor: alice
+  followed_actor: bob
+  state: accepted
+  accepted_at: <%= 3.days.ago.to_fs(:db) %>
+
+bob_follows_alice:
+  follower_actor: bob
+  followed_actor: alice
+  state: accepted
+  accepted_at: <%= 3.days.ago.to_fs(:db) %>
+
+# alice -> carol: one way. Alice sees Carol's posts; Carol does not see Alice's.
+alice_follows_carol:
+  follower_actor: alice
+  followed_actor: carol
+  state: accepted
+  accepted_at: <%= 2.days.ago.to_fs(:db) %>
+
+# dave -> alice: pending. Dave sees nothing of Alice's yet.
+dave_follows_alice:
+  follower_actor: dave
+  followed_actor: alice
+  state: requested
+
+# carol -> dave: rejected.
+carol_follows_dave:
+  follower_actor: carol
+  followed_actor: dave
+  state: rejected

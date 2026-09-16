@@ -10,6 +10,12 @@ class Actor < ApplicationRecord
   enum :discoverable, { everyone: 0, connections_only: 1, invisible: 2 }, validate: true
 
   has_one :member, dependent: :destroy
+
+  has_many :outgoing_follows, class_name: "Follow", foreign_key: :follower_actor_id, dependent: :destroy
+  has_many :incoming_follows, class_name: "Follow", foreign_key: :followed_actor_id, dependent: :destroy
+
+  has_many :followees, -> { merge(Follow.accepted) }, through: :outgoing_follows, source: :followed_actor
+  has_many :followers, -> { merge(Follow.accepted) }, through: :incoming_follows, source: :follower_actor
   has_one_attached :avatar
 
   normalizes :handle, with: ->(handle) { handle.to_s.strip.downcase.delete_prefix("@") }
@@ -30,4 +36,26 @@ class Actor < ApplicationRecord
   def to_s = display_name.presence || "@#{handle}"
 
   def to_param = handle
+
+  # A connection is derived, never stored: both actors follow each other and
+  # both follows are accepted. Accepting a follow never implies the reverse.
+  def connected_to?(other)
+    return false if other.nil? || other.id == id
+
+    Follow.accepted.between(id, other.id).exists? && Follow.accepted.between(other.id, id).exists?
+  end
+
+  def follows?(other)
+    other.present? && Follow.accepted.between(id, other.id).exists?
+  end
+
+  def follow_of(other)
+    other && outgoing_follows.between(id, other.id).first
+  end
+
+  # Whose posts this actor may see: its own, plus everyone it has been accepted
+  # to follow.
+  def visible_author_ids
+    [ id ] + Follow.accepted.where(follower_actor_id: id).pluck(:followed_actor_id)
+  end
 end

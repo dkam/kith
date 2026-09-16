@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_040000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -55,6 +55,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_030000) do
     t.index ["type"], name: "index_actors_on_type"
   end
 
+  create_table "follows", force: :cascade do |t|
+    t.datetime "accepted_at"
+    t.datetime "created_at", null: false
+    t.integer "followed_actor_id", null: false
+    t.integer "follower_actor_id", null: false
+    t.integer "state", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["followed_actor_id", "state"], name: "index_follows_on_followed_actor_id_and_state"
+    t.index ["followed_actor_id"], name: "index_follows_on_followed_actor_id"
+    t.index ["follower_actor_id", "followed_actor_id"], name: "index_follows_on_follower_actor_id_and_followed_actor_id", unique: true
+    t.index ["follower_actor_id", "state"], name: "index_follows_on_follower_actor_id_and_state"
+    t.index ["follower_actor_id"], name: "index_follows_on_follower_actor_id"
+  end
+
   create_table "invites", force: :cascade do |t|
     t.integer "claimed_by_member_id"
     t.string "code", null: false
@@ -90,6 +104,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_030000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "follows", "actors", column: "followed_actor_id"
+  add_foreign_key "follows", "actors", column: "follower_actor_id"
   add_foreign_key "invites", "members", column: "claimed_by_member_id"
   add_foreign_key "invites", "members", column: "inviter_member_id"
   add_foreign_key "members", "actors"
