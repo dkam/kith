@@ -5,9 +5,58 @@ class PostTest < ActiveSupport::TestCase
     assert_equal "followers", Post.new.audience
   end
 
+  # --- Drafts ---------------------------------------------------------------
+  #
+  # A draft is a post with no publication time. There is no second column and
+  # no status enum: the timestamp is the whole fact, so nothing can be a draft
+  # and published at once, or published with no date on it.
+
+  test "a post starts as a draft" do
+    post = actors(:alice).posts.create!(body: "Hello")
+
+    assert post.draft?
+    refute post.published?
+    assert_nil post.published_at
+  end
+
   test "publishing stamps the time" do
     post = actors(:alice).posts.create!(body: "Hello")
+
+    assert post.publish!
     assert_in_delta Time.current, post.published_at, 5.seconds
+    assert post.published?
+  end
+
+  test "publishing twice does not move the date" do
+    post = published_post(actors(:alice), body: "Out already", published_at: 3.days.ago)
+
+    refute post.publish!
+    assert_in_delta 3.days.ago, post.reload.published_at, 5.seconds
+  end
+
+  test "live and drafts are the two halves of the table" do
+    assert_equal Post.count, Post.live.count + Post.drafts.count
+    assert_includes Post.drafts, posts(:alice_draft)
+    assert_includes Post.live, posts(:alice_public)
+  end
+
+  test "a draft is not public, whatever its audience says" do
+    refute posts(:alice_public_draft).leaves_the_instance?
+    refute_includes Post.publicly_visible, posts(:alice_public_draft)
+  end
+
+  test "a draft's audience can still be changed: nobody has been promised anything" do
+    draft = posts(:alice_draft)
+
+    assert draft.update(audience: :public)
+    assert draft.reload.audience_public?
+  end
+
+  test "publishing a draft can settle its audience in the same breath" do
+    draft = posts(:alice_draft)
+
+    assert draft.update(audience: :public, published_at: Time.current)
+    assert draft.reload.audience_public?
   end
 
   test "an explicit published_at is kept" do
@@ -63,7 +112,7 @@ class PostTest < ActiveSupport::TestCase
     assert_equal "A new title", post.reload.title
   end
 
-  test "only public posts leave the instance" do
+  test "only published public posts leave the instance" do
     assert posts(:alice_public).leaves_the_instance?
     refute posts(:alice_followers).leaves_the_instance?
   end
@@ -92,11 +141,11 @@ class PostTest < ActiveSupport::TestCase
 
   test "newest_first is strictly chronological" do
     assert_equal [ posts(:dave_followers), posts(:carol_followers), posts(:bob_followers), posts(:alice_public), posts(:alice_followers) ],
-                 Post.newest_first.to_a
+                 Post.live.newest_first.to_a
   end
 
   test "destroying an actor destroys their posts" do
-    assert_difference -> { Post.count }, -2 do
+    assert_difference -> { Post.count }, -4 do
       actors(:alice).destroy
     end
   end

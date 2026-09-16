@@ -5,7 +5,8 @@ class Post < ApplicationRecord
   TITLE_LIMIT = 200
   PHOTO_LIMIT = 20
 
-  # Fixed at write time and never changed: see audience_is_immutable. Circles
+  # Chosen while it is a draft, fixed once it is published, and never changed
+  # after that: see audience_is_immutable. Circles
   # will be added here, which is why the enum is integer-backed and sparse.
   enum :audience, { followers: 0, public: 10 }, prefix: true, validate: true
 
@@ -22,16 +23,23 @@ class Post < ApplicationRecord
 
   scope :newest_first, -> { order(published_at: :desc, id: :desc) }
   scope :by, ->(actors) { where(actor: actors) }
-  scope :publicly_visible, -> { where(audience: :public) }
+  # Posted, as opposed to still being written. The seam for scheduling is the
+  # absence of a second column: when it is wanted, `live` becomes
+  # `where(published_at: ..Time.current)` and nothing else has to know.
+  scope :live, -> { where.not(published_at: nil) }
+  scope :drafts, -> { where(published_at: nil) }
+  scope :publicly_visible, -> { live.where(audience: :public) }
   scope :readable, -> { with_rich_text_body_and_embeds.includes(:actor) }
 
-  after_create_commit :fan_out
+  # Not on create: a post reaches other people when it is published, which may
+  # be days later. Both happen at once for a post written and posted in one go,
+  # and `published_at` going from nothing to something is that moment either
+  # way.
+  after_save_commit :fan_out, if: :just_published?
 
-  before_validation :set_published_at, on: :create
   before_save :forget_attachment_urls
 
   validates :title, length: { maximum: TITLE_LIMIT }
-  validates :published_at, presence: true
   validate :body_is_not_enormous
   validate :must_say_something
   validate :photo_count_is_sane
@@ -40,6 +48,21 @@ class Post < ApplicationRecord
   delegate :display_name, :handle, to: :actor, prefix: false
 
   def local? = !remote?
+
+  # A draft is a post nobody has published yet, and the missing timestamp is
+  # the whole of that fact — there is no status column to fall out of step with
+  # it. Visibility keeps a draft to its author whatever its audience says.
+  def draft? = published_at.nil?
+  def published? = !draft?
+
+  # Publication is the act; the timestamp is its record. It happens once: a
+  # post already out in the world does not get a fresh date for an edit, and
+  # the reader's feed is ordered by this.
+  def publish!(at: Time.current)
+    return false unless draft?
+
+    update!(published_at: at)
+  end
 
   # The photographs embedded in the body, as Active Storage attachments —
   # which is what MediaController serves and what Visibility checks.
@@ -58,16 +81,14 @@ class Post < ApplicationRecord
 
   # Whether the post is readable by someone with no account at all. Only public
   # posts will ever leave this instance.
-  def leaves_the_instance? = audience_public?
+  def leaves_the_instance? = published? && audience_public?
 
   private
     def fan_out
       FanOutJob.perform_later(self)
     end
 
-    def set_published_at
-      self.published_at ||= Time.current
-    end
+    def just_published? = saved_change_to_published_at?(from: nil)
 
     # Lexxy sends each embedded photo with the Active Storage blob URL it drew
     # the preview from. That URL is a bearer token: it works for anyone holding
@@ -125,10 +146,14 @@ class Post < ApplicationRecord
       errors.add(:base, "A post holds up to #{PHOTO_LIMIT} photos.") if photo_count > PHOTO_LIMIT
     end
 
-    # The audience is a promise made to the reader at the moment of writing. A
-    # post that was shown to followers must not silently become public, and a
-    # public post must not silently retract.
+    # The audience is a promise made to the reader at the moment of *publishing*.
+    # A post that was shown to followers must not silently become public, and a
+    # public post must not silently retract. Until it is published the promise
+    # has not been made to anybody, so a draft's audience is still the author's
+    # to change — including in the same save that publishes it.
     def audience_is_immutable
+      return if published_at_was.nil?
+
       errors.add(:audience, "can't be changed after a post is written") if audience_changed?
     end
 end

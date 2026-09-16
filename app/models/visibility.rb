@@ -18,6 +18,10 @@ class Visibility
 
   # --- Posts ---------------------------------------------------------------
 
+  # A draft is asked about first, because it is the one case where the audience
+  # says nothing at all: a post nobody has published belongs to its author
+  # alone, public or not. It is an intention, not a promise.
+  #
   # Public posts are readable by anyone, including people with no account —
   # they are the only thing that will ever leave this instance.
   #
@@ -25,6 +29,7 @@ class Visibility
   # the author has been accepted. A pending or rejected follow sees nothing.
   def post?(post)
     return false if post.nil?
+    return post.actor_id == viewer&.id if post.draft?
     return true if post.audience_public?
     return false if signed_out?
     return true if post.actor_id == viewer.id
@@ -37,7 +42,8 @@ class Visibility
   def visible_posts(scope = Post.all)
     return scope.publicly_visible if signed_out?
 
-    scope.where(actor_id: viewer.visible_author_ids).or(scope.publicly_visible)
+    posted = scope.live.where(actor_id: viewer.visible_author_ids).or(scope.publicly_visible)
+    posted.or(scope.drafts.where(actor_id: viewer.id))
   end
 
   # --- Profile links -------------------------------------------------------

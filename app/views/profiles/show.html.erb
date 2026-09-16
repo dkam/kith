@@ -17,6 +17,20 @@
   <% end %>
 </header>
 
+<%# Drafts are only ever in @drafts for the author themselves — Visibility
+    hands nobody else another person's unpublished work. They sit apart from
+    the timeline rather than in it: a draft has no date to be ordered by. %>
+<% if @drafts&.any? %>
+  <section class="border-b border-rule py-8">
+    <h2 class="label">Drafts</h2>
+    <div class="divide-y divide-rule">
+      <% @drafts.each do |draft| %>
+        <%= render "posts/post", post: draft %>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
 <% if @posts.any? %>
   <div class="divide-y divide-rule">
     <% @posts.each do |post| %>

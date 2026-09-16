@@ -70,6 +70,37 @@ class WritingTest < ApplicationSystemTestCase
     assert_text "can't be changed"
   end
 
+  test "sleeping on a draft, then posting it" do
+    visit new_post_path
+
+    fill_in "Title", with: "Sleep on it"
+    compose "Not sure about this yet."
+    click_on "Save as draft"
+
+    assert_text "Saved as a draft."
+    assert_text "This is a draft."
+    assert_text "Only you can see it"
+
+    # And it is nowhere near anyone's feed until it is posted.
+    visit root_path
+    assert_no_text "Sleep on it"
+
+    visit profile_path("alice")
+    assert_selector "h2", text: /drafts/i   # .label uppercases it in CSS
+    click_on "Sleep on it"
+
+    click_on "Post it"
+
+    # Assert the page *first*: the fan-out is only enqueued once the request
+    # has been served, and click_on returns before that.
+    assert_text "Posted."
+    assert_no_text "This is a draft."
+    perform_enqueued_jobs
+
+    visit root_path
+    assert_text "Sleep on it"
+  end
+
   test "deleting a post" do
     visit post_path(posts(:alice_followers))
 

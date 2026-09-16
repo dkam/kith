@@ -80,10 +80,22 @@ These are design decisions, not suggestions.
   `requested → accepted` (or `rejected`). Accepting **never** creates the
   reverse edge. A *connection* is derived: mutual accepted follows. The accept
   UI offers a one-tap "follow back", which creates a second, separate edge.
-- **Post audience is fixed at write time and never changes**: `followers`
+- **Post audience is fixed at publication and never changes**: `followers`
   (default) or `public`. Circles come later — leave room in the enum.
   Public posts are the only thing that will ever leave the instance to non-Kith
-  servers.
+  servers. A draft's audience is still the author's to change — the promise is
+  made to the reader when the post reaches them, not when it is begun.
+- **A draft is a post with no `published_at`.** There is no status column: the
+  timestamp is the whole fact, so nothing can be a draft and published at once,
+  or published with no date on it. Publishing is an act (`Post#publish!`,
+  `POST /posts/:id/publish`) and it happens once — an edit never re-dates a
+  post, and there is no unpublishing, because the reader has already seen it.
+  A draft is visible to its author **and to nobody else, whatever its audience
+  says**, which `Visibility#post?` answers before it looks at the audience at
+  all. It never fans out, so it never reaches a feed. This also leaves the seam
+  for scheduling without building it: no date, a future date, a past date — the
+  day that is wanted, `Post.live` becomes `where(published_at: ..Time.current)`
+  and nothing else has to know.
 - **Comments are flat.** No threading. Visible to the post's audience. A
   commenter's name is always shown; their profile link is rendered only if the
   viewer is connected to them **or** they are `discoverable: everyone`.
@@ -110,8 +122,8 @@ Integer primary keys. Don't reach for UUIDs.
   ranked enum `member` / `moderator` / `admin` / `owner` — see `Authority` —
   and `invite_allowance` is how many people they may bring in.
 - **`posts`** — `belongs_to :actor`; `title` (optional), `audience` enum,
-  `published_at`, `uri` (nullable now; will hold the ActivityPub id), `remote`
-  boolean. The body is **not** a column: `has_rich_text :body` puts it in
+  `published_at` (**nullable: NULL is a draft**), `uri` (nullable now; will hold
+  the ActivityPub id), `remote` boolean. The body is **not** a column: `has_rich_text :body` puts it in
   `action_text_rich_texts`, and the post's photographs hang off that rich text
   as Active Storage embeds, in the places the author put them.
 - **`follows`** — `follower_actor_id`, `followed_actor_id`, `state`,
@@ -149,6 +161,14 @@ Integer primary keys. Don't reach for UUIDs.
   expire and are single-use but never said how many, which is fine until the
   day you want to stop. Two knobs rather than one because "slow down" and
   "we're full" are different sentences.
+- `posts.published_at` became nullable, and that is how a draft is stored. The
+  brief has no drafts in it. Two columns were considered and one was kept: a
+  `status` enum beside the timestamp is a second fact that can disagree with
+  the first, and the disagreement — published with no date, dated but a draft —
+  is exactly the kind nobody notices. It is also not `created_at` under another
+  name: a draft begun in March and posted in June belongs in June's feeds, and
+  a federated or RSS post carries its origin's date rather than the moment we
+  wrote the row.
 - `feed_items.posted_at` was added, copied from the post. The feed is ordered by
   when something was *written*, not by when it was fanned out — otherwise
   back-filling an accepted follow drops old posts at the top of the reader's
@@ -405,8 +425,8 @@ was v1.7.8 — eight releases with no commit you could check out.
 2. Authentication, invites (issue, claim, expire), first member from the
    console setup code (and the rake task), profile settings (display name,
    avatar, discoverable).
-3. Posts: create/edit/delete, title, rich text body written in Lexxy with
-   photographs embedded in the prose (drag, paste or pick; direct upload),
+3. Posts: create/edit/delete, drafts, title, rich text body written in Lexxy
+   with photographs embedded in the prose (drag, paste or pick; direct upload),
    audience selector, permalink.
 4. Follows: request, accept, reject, unfollow, follow back, with Turbo Stream
    button updates.

@@ -78,6 +78,103 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
     assert_includes target.body.to_s, "Edited"
   end
 
+  # --- Drafts ---
+  #
+  # Two buttons, one form: "Save draft" sends `draft`, and anything else means
+  # publish. The permalink has the same pair.
+
+  test "saving a draft writes a post that reaches nobody" do
+    sign_in_as members(:alice)
+
+    assert_difference -> { Post.count }, 1 do
+      post posts_url, params: { draft: "1", post: { title: "Sleep on it", body: "<p>Not yet.</p>" } }
+    end
+
+    written = Post.order(:id).last
+    assert written.draft?
+    assert_redirected_to written
+    assert_empty FeedItem.where(post: written)
+  end
+
+  test "posting without the draft button publishes" do
+    sign_in_as members(:alice)
+    post posts_url, params: { post: { body: "<p>Out it goes.</p>" } }
+
+    assert Post.order(:id).last.published?
+  end
+
+  test "a draft's permalink is a 404 for an accepted follower" do
+    sign_in_as members(:bob)
+
+    get post_url(posts(:alice_draft))
+
+    assert_response :not_found
+    assert_empty response.body
+  end
+
+  test "the author can read their own draft" do
+    sign_in_as members(:alice)
+
+    get post_url(posts(:alice_draft))
+
+    assert_response :success
+    assert_select "h1", "Not finished yet"
+  end
+
+  test "the author publishes a draft from its permalink" do
+    sign_in_as members(:alice)
+
+    assert_changes -> { posts(:alice_draft).reload.published_at }, from: nil do
+      post publish_post_url(posts(:alice_draft))
+    end
+
+    assert_redirected_to posts(:alice_draft)
+  end
+
+  test "a moderator cannot publish someone else's draft" do
+    sign_in_as members(:mo)
+
+    post publish_post_url(posts(:alice_draft))
+
+    assert_response :not_found
+    assert posts(:alice_draft).reload.draft?
+  end
+
+  test "saving from the editor keeps a draft a draft" do
+    sign_in_as members(:alice)
+
+    patch post_url(posts(:alice_draft)), params: { draft: "1", post: { body: "<p>Still going.</p>" } }
+
+    assert posts(:alice_draft).reload.draft?
+    assert_includes posts(:alice_draft).reload.body.to_s, "Still going"
+  end
+
+  test "publishing from the editor" do
+    sign_in_as members(:alice)
+
+    patch post_url(posts(:alice_draft)), params: { post: { body: "<p>Finished.</p>" } }
+
+    assert posts(:alice_draft).reload.published?
+  end
+
+  test "a draft's audience can still be chosen: nobody has been promised anything" do
+    sign_in_as members(:alice)
+
+    patch post_url(posts(:alice_draft)), params: { draft: "1", post: { audience: "public" } }
+
+    assert posts(:alice_draft).reload.audience_public?
+  end
+
+  test "the editor offers the audience while a post is a draft, and states it after" do
+    sign_in_as members(:alice)
+
+    get edit_post_url(posts(:alice_draft))
+    assert_select "input[type=radio][name=?]", "post[audience]"
+
+    get edit_post_url(posts(:alice_followers))
+    assert_select "input[type=radio][name=?]", "post[audience]", false
+  end
+
   test "deleting a post takes its photos with it" do
     sign_in_as members(:alice)
     target = posts(:alice_followers)

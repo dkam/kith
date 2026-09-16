@@ -1,4 +1,11 @@
 module PostTestHelper
+  # A post that is out in the world. Creating a post leaves it a draft —
+  # publishing is a deliberate act, and `published_at` is its only record — so
+  # a test that means "a post somebody can read" says so.
+  def published_post(actor, published_at: Time.current, **attributes)
+    actor.posts.create!(published_at: published_at, **attributes)
+  end
+
   # Puts a photograph into a post's body the way the editor does: an uploaded
   # blob, named in the markup by its signed global id. Action Text turns that
   # into the embeds attachment that MediaController serves and Visibility

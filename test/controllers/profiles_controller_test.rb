@@ -19,6 +19,24 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(posts(:alice_followers))}", false
   end
 
+  test "your own drafts are listed on your own profile, apart from what you have posted" do
+    sign_in_as members(:alice)
+    get profile_url("alice")
+
+    assert_response :success
+    assert_select "##{dom_id(posts(:alice_draft))}"
+    assert_select "##{dom_id(posts(:alice_public_draft))}"
+  end
+
+  test "a reader is shown none of an author's drafts" do
+    sign_in_as members(:bob)
+    get profile_url("alice")
+
+    assert_select "##{dom_id(posts(:alice_draft))}", false
+    assert_select "##{dom_id(posts(:alice_public_draft))}", false
+    refute_includes response.body, "Half a thought"
+  end
+
   test "an invisible member's profile is 404 for a stranger" do
     sign_in_as members(:dave)
     get profile_url("carol")

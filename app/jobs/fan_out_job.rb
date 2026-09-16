@@ -20,7 +20,13 @@ class FanOutJob < ApplicationJob
 
   private
     # A new post reaches its author and everyone whose follow has been accepted.
+    # A draft reaches nobody, including its author's own feed: the feed is what
+    # other people have posted, and a post that is still being written has not
+    # been posted. The guard is here as well as in the callback because this
+    # job is the only thing that writes into other people's feeds.
     def fan_out_post(post)
+      return if post.draft?
+
       member_ids = Member.where(actor_id: reader_actor_ids_for(post)).pluck(:id)
       insert_items member_ids.map { |member_id| { member_id:, post_id: post.id, posted_at: post.published_at } }
     end

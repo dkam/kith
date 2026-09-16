@@ -39,7 +39,10 @@
     <p class="hint">Drop photos in as you write, or paste them. Location and camera data are removed.</p>
   </div>
 
-  <% if post.new_record? %>
+  <%# The audience is offered for as long as the post is a draft: it is a
+      promise to the reader, and no reader has been made one yet. Once it is
+      published the choice is stated and gone. %>
+  <% if post.draft? %>
     <fieldset class="border-t border-rule pt-6">
       <legend class="label">Who is this for</legend>
       <div class="space-y-3">
@@ -58,7 +61,7 @@
           </span>
         </label>
       </div>
-      <p class="hint">You're choosing this once. It can't be changed after you post.</p>
+      <p class="hint">You're choosing this once. It can't be changed after you post it.</p>
     </fieldset>
   <% else %>
     <p class="border-t border-rule pt-6 text-sm text-quiet">
@@ -69,7 +72,9 @@
   <% end %>
 
   <div class="flex items-center gap-5">
-    <%= form.submit post.new_record? ? "Post" : "Save", class: "btn" %>
+    <%= form.submit post.draft? ? "Post" : "Save", class: "btn" %>
+    <%# name: "draft" is how the controller tells the two buttons apart. %>
+    <%= form.submit "Save as draft", name: "draft", class: "btn-plain" if post.draft? %>
     <%= link_to "Cancel", post.persisted? ? post_path(post) : root_path, class: "btn-plain" %>
   </div>
 <% end %>

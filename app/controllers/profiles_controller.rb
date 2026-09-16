@@ -2,7 +2,10 @@ class ProfilesController < ApplicationController
   before_action :set_actor
 
   def show
-    @posts = visibility.visible_posts(@actor.posts).newest_first.limit(20)
+    @posts = visibility.visible_posts(@actor.posts).live.newest_first.limit(20)
+    # Through Visibility like everything else, even though the only actor this
+    # can return anything for is the viewer themselves.
+    @drafts = visibility.visible_posts(@actor.posts).drafts.order(created_at: :desc, id: :desc)
     @follow = current_actor.follow_of(@actor)
     @follows_you = @actor.follow_of(current_actor)
   end

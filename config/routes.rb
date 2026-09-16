@@ -19,6 +19,10 @@ Rails.application.routes.draw do
   delete "settings/avatar", to: "settings#destroy_avatar", as: :settings_avatar
 
   resources :posts, except: :index do
+    # Publishing is its own verb: a draft goes out from its permalink as well
+    # as from the editor, and neither is an edit of what it says.
+    member { post :publish }
+
     resources :comments, only: :create
   end
   resources :comments, only: :destroy

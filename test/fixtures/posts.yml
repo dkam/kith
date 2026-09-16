@@ -26,3 +26,22 @@ dave_followers:
   title: Nobody follows Dave
   audience: followers
   published_at: <%= 10.minutes.ago.to_fs(:db) %>
+
+# Drafts have no published_at at all: publication is the act, and the timestamp
+# is its only record. Nobody but the author may see one, whatever its audience
+# says — alice_public_draft is the one that would leak if a draft were treated
+# as a post that simply hasn't been fanned out yet.
+alice_draft:
+  actor: alice
+  title: Not finished yet
+  audience: followers
+
+alice_public_draft:
+  actor: alice
+  title: Half a thought
+  audience: public
+
+carol_draft:
+  actor: carol
+  title: Carol's own business
+  audience: followers

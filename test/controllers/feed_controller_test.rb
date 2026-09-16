@@ -88,7 +88,7 @@ class FeedControllerTest < ActionDispatch::IntegrationTest
 
   test "the feed paginates with a lazy turbo frame" do
     sign_in_as members(:alice)
-    25.times { |i| actors(:bob).posts.create!(body: "Filler #{i}") }
+    25.times { |i| published_post(actors(:bob), body: "Filler #{i}") }
     Post.find_each { |post| FanOutJob.perform_now(post) }
 
     get root_url

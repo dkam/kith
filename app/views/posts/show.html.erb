@@ -1,6 +1,14 @@
 <% content_for :title, @post.excerpt(length: 60) %>
 
 <article>
+  <% if @post.draft? %>
+    <p class="notice">
+      <span class="font-medium text-title">This is a draft.</span>
+      Only you can see it. Posting it hands it to
+      <%= @post.audience_public? ? "anyone with the link" : "the people who follow you" %>.
+    </p>
+  <% end %>
+
   <%= render "posts/byline", post: @post %>
 
   <% if @post.title.present? %>
@@ -15,11 +23,15 @@
   <%# rewriting someone else's is not. Both answers come from Authority. %>
   <% if authority.delete_post?(@post) %>
     <div class="mt-8 flex items-center gap-5 border-t border-rule pt-5">
-      <%= link_to "Edit", edit_post_path(@post), class: "btn-plain" if authority.edit_post?(@post) %>
+      <% if authority.edit_post?(@post) %>
+        <%= button_to "Post it", publish_post_path(@post), class: "btn btn-sm" if @post.draft? %>
+        <%= link_to "Edit", edit_post_path(@post), class: "btn-plain" %>
+      <% end %>
       <%= button_to(authority.edit_post?(@post) ? "Delete" : "Remove", @post, method: :delete, class: "btn-plain",
             form: { data: { turbo_confirm: "Delete this post and its photos? This can't be undone." } }) %>
     </div>
   <% end %>
 </article>
 
-<%= render "comments/section", post: @post, comments: @comments, comment: @comment %>
+<%# A draft has no audience yet, so there is nobody to be replying to. %>
+<%= render "comments/section", post: @post, comments: @comments, comment: @comment unless @post.draft? %>

@@ -3,11 +3,21 @@
   <%= render "shared/actor_name", actor: post.actor %>
   <span class="text-hush">·</span>
   <%= link_to post, class: "text-quiet no-underline hover:text-ink" do %>
-    <time datetime="<%= post.published_at.iso8601 %>" title="<%= post.published_at.to_fs(:long) %>">
-      <%= time_ago_in_words post.published_at %> ago
-    </time>
+    <%# A draft has no publication date — that timestamp is what publishing is.
+        Until then the honest thing to show is when it was begun. %>
+    <% if post.draft? %>
+      <time datetime="<%= post.created_at.iso8601 %>" title="<%= post.created_at.to_fs(:long) %>">
+        Started <%= time_ago_in_words post.created_at %> ago
+      </time>
+    <% else %>
+      <time datetime="<%= post.published_at.iso8601 %>" title="<%= post.published_at.to_fs(:long) %>">
+        <%= time_ago_in_words post.published_at %> ago
+      </time>
+    <% end %>
   <% end %>
-  <% if post.audience_public? %>
+  <% if post.draft? %>
+    <span class="micro rounded-full border border-rule px-2 py-0.5">Draft</span>
+  <% elsif post.audience_public? %>
     <span class="micro rounded-full border border-rule px-2 py-0.5">Public</span>
   <% end %>
 </div>

@@ -57,6 +57,38 @@ class VisibilityTest < ActiveSupport::TestCase
     refute signed_out.post?(nil)
   end
 
+  # --- Drafts ---------------------------------------------------------------
+  #
+  # A draft is a post with no published_at, and it is the one case where the
+  # audience says nothing at all: until it is published it belongs to its
+  # author alone, public or not.
+
+  test "a draft is visible to its author and to nobody else" do
+    assert as(:alice).post?(posts(:alice_draft))
+    refute as(:bob).post?(posts(:alice_draft)), "bob's accepted follow is not a key to what alice hasn't posted"
+    refute as(:dave).post?(posts(:alice_draft))
+    refute signed_out.post?(posts(:alice_draft))
+  end
+
+  test "a public draft is not public until it is published" do
+    refute signed_out.post?(posts(:alice_public_draft))
+    refute as(:dave).post?(posts(:alice_public_draft))
+    assert as(:alice).post?(posts(:alice_public_draft))
+  end
+
+  test "publishing hands the draft to the audience it named all along" do
+    posts(:alice_public_draft).publish!
+    posts(:alice_draft).publish!
+
+    assert signed_out.post?(posts(:alice_public_draft))
+    assert as(:bob).post?(posts(:alice_draft))
+    refute as(:dave).post?(posts(:alice_draft))
+  end
+
+  test "a draft is not something a moderator can reach either" do
+    refute Visibility.new(actors(:mo)).post?(posts(:alice_public_draft))
+  end
+
   test "revoking a follow revokes the posts with it" do
     assert as(:bob).post?(posts(:alice_followers))
 
@@ -94,8 +126,15 @@ class VisibilityTest < ActiveSupport::TestCase
   end
 
   test "visible_posts for a follower is their own posts plus those they follow, plus anything public" do
-    assert_equal [ posts(:alice_followers), posts(:alice_public), posts(:bob_followers), posts(:carol_followers) ].map(&:id).sort,
+    assert_equal [ posts(:alice_followers), posts(:alice_public), posts(:alice_draft), posts(:alice_public_draft),
+                   posts(:bob_followers), posts(:carol_followers) ].map(&:id).sort,
                  as(:alice).visible_posts.pluck(:id).sort
+  end
+
+  test "visible_posts carries your own drafts and nobody else's" do
+    assert_includes as(:alice).visible_posts.pluck(:id), posts(:alice_draft).id
+    refute_includes as(:alice).visible_posts.pluck(:id), posts(:carol_draft).id,
+      "alice follows carol, which is not an invitation to read what carol hasn't posted"
   end
 
   test "visible_posts for someone who follows nobody is their own plus public" do
@@ -267,7 +306,7 @@ class VisibilityTest < ActiveSupport::TestCase
         "#{staff.handle} follows nobody: a role must not widen the feed"
 
       Post.all.each do |post|
-        assert_equal post.audience_public?, Visibility.new(staff).post?(post),
+        assert_equal post.audience_public? && post.published?, Visibility.new(staff).post?(post),
           "#{staff.handle} was told about #{post.title || post.id} by their role"
       end
     end
