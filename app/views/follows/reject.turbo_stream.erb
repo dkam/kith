@@ -1,0 +1,5 @@
+<%= turbo_stream.remove dom_id(@follow, :request) %>
+
+<%= turbo_stream.replace "follow-requests-heading" do %>
+  <%= render "follow_requests/heading", count: current_actor.incoming_follows.requested.count %>
+<% end %>

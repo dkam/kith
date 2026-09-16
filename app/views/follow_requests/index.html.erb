@@ -1,0 +1,23 @@
+<% content_for :title, "Following" %>
+
+<h1 class="font-serif text-2xl font-semibold">Following</h1>
+
+<section class="mt-8">
+  <%= render "follow_requests/heading", count: @requests.size %>
+  <p class="mt-1 text-sm text-quiet">Accepting lets someone read your posts. It doesn't make you read theirs.</p>
+
+  <ul id="follow-requests" class="mt-2 divide-y divide-rule border-t border-rule empty:border-0">
+    <% @requests.each do |request| %>
+      <%= render "follow_requests/request", request: request %>
+    <% end %>
+  </ul>
+</section>
+
+<%= render "follow_requests/list", title: "You asked", follows: @pending, actor_method: :followed_actor,
+      empty: "You haven't asked to follow anyone who hasn't answered." %>
+
+<%= render "follow_requests/list", title: "You follow", follows: @following, actor_method: :followed_actor,
+      empty: "You aren't following anyone yet." %>
+
+<%= render "follow_requests/list", title: "Follow you", follows: @followers, actor_method: :follower_actor,
+      empty: "Nobody follows you yet." %>

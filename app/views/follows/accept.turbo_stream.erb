@@ -1,0 +1,16 @@
+<%# The request is answered, so its row goes. In its place, the one-tap offer
+    to follow back — a separate edge, asked for deliberately. %>
+<%= turbo_stream.replace dom_id(@follow, :request) do %>
+  <li class="flex items-center gap-3 py-4" id="<%= dom_id @follow, :request %>">
+    <%= avatar_tag @actor, css_class: "size-9 rounded-full object-cover bg-rule shrink-0" %>
+    <div class="min-w-0 flex-1">
+      <p class="text-sm"><span class="font-medium"><%= @actor.to_s %></span> follows you now.</p>
+      <p class="hint">Following back is a separate thing, if you want it.</p>
+    </div>
+    <%= render "follows/button", actor: @actor, follow: current_actor.follow_of(@actor) %>
+  </li>
+<% end %>
+
+<%= turbo_stream.replace "follow-requests-heading" do %>
+  <%= render "follow_requests/heading", count: current_actor.incoming_follows.requested.count %>
+<% end %>

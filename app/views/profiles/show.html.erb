@@ -1,0 +1,34 @@
+<% content_for :title, @actor.to_s %>
+
+<header class="flex items-start gap-4 border-b border-rule pb-8">
+  <%= avatar_tag @actor, css_class: "size-16 rounded-full object-cover bg-rule shrink-0" %>
+
+  <div class="min-w-0 flex-1">
+    <h1 class="font-serif text-2xl font-semibold"><%= @actor.to_s %></h1>
+    <p class="text-sm text-quiet">@<%= @actor.full_handle %></p>
+
+    <% if @follows_you&.accepted? %>
+      <p class="mt-1 text-sm text-quiet">Follows you</p>
+    <% end %>
+  </div>
+
+  <% unless @actor == current_actor %>
+    <div class="shrink-0"><%= render "follows/button", actor: @actor, follow: @follow %></div>
+  <% end %>
+</header>
+
+<% if @posts.any? %>
+  <div class="divide-y divide-rule">
+    <% @posts.each do |post| %>
+      <%= render "posts/post", post: post %>
+    <% end %>
+  </div>
+<% else %>
+  <p class="py-10 text-sm text-quiet">
+    <% if @actor == current_actor %>
+      You haven't written anything yet.
+    <% else %>
+      Nothing here that you can see.
+    <% end %>
+  </p>
+<% end %>

@@ -1,0 +1,12 @@
+<%# The one control that speaks for the state of a follow edge. It is replaced
+    wholesale by a Turbo Stream after every action, so the label is always the
+    truth about the edge rather than an optimistic guess. %>
+<span id="<%= dom_id actor, :follow_button %>">
+  <% if follow.nil? || follow.rejected? %>
+    <%= button_to "Follow", follow_actor_path(actor), class: "btn" %>
+  <% elsif follow.requested? %>
+    <%= button_to "Asked — cancel", follow_path(follow), method: :delete, class: "btn-quiet" %>
+  <% else %>
+    <%= button_to "Following — unfollow", follow_path(follow), method: :delete, class: "btn-quiet" %>
+  <% end %>
+</span>

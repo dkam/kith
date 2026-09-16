@@ -1,0 +1,3 @@
+<%= turbo_stream.replace dom_id(@actor, :follow_button) do %>
+  <%= render "follows/button", actor: @actor, follow: @follow %>
+<% end %>
