@@ -1,0 +1,23 @@
+alice:
+  type: LocalActor
+  handle: alice
+  display_name: Alice Brennan
+  discoverable: connections_only
+
+bob:
+  type: LocalActor
+  handle: bob
+  display_name: Bob Ndlovu
+  discoverable: everyone
+
+carol:
+  type: LocalActor
+  handle: carol
+  display_name: Carol Iyer
+  discoverable: invisible
+
+dave:
+  type: LocalActor
+  handle: dave
+  display_name: Dave Okonkwo
+  discoverable: connections_only

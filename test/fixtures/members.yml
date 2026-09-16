@@ -1,0 +1,22 @@
+alice:
+  actor: alice
+  email_address: alice@example.com
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+
+bob:
+  actor: bob
+  email_address: bob@example.com
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  inviter_member: alice
+
+carol:
+  actor: carol
+  email_address: carol@example.com
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  inviter_member: alice
+
+dave:
+  actor: dave
+  email_address: dave@example.com
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  inviter_member: bob

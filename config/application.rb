@@ -16,12 +16,19 @@ module Kith
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
-    # Configuration for the application, engines, and railties goes here.
-    #
-    # These settings can be overridden in specific environments using the files
-    # in config/environments, which are processed later.
-    #
-    # config.time_zone = "Central Time (US & Canada)"
-    # config.eager_load_paths << Rails.root.join("extras")
+    # Never hand out a blob URL. Every attachment is served by MediaController,
+    # which re-checks the post's audience at request time.
+    config.active_storage.resolve_model_to_route = :rails_storage_proxy
+
+    # Variants are generated on demand by MediaController, not in the request
+    # that renders the page.
+    config.active_storage.variant_processor = :vips
+
+    config.generators do |g|
+      g.test_framework :test_unit, fixture: true
+      g.system_tests nil
+      g.helper false
+      g.jbuilder false
+    end
   end
 end

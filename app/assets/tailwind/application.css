@@ -1,1 +1,80 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+
+  --color-ink: oklch(0.22 0.01 265);
+  --color-quiet: oklch(0.52 0.01 265);
+  --color-hush: oklch(0.72 0.01 265);
+  --color-rule: oklch(0.92 0.004 265);
+  --color-paper: oklch(0.99 0.002 95);
+  --color-accent: oklch(0.48 0.09 250);
+}
+
+@layer base {
+  html {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+  }
+
+  a {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Forms: a single quiet field style, used everywhere. */
+  .field {
+    @apply block w-full rounded-md border border-rule bg-white px-3 py-2 text-ink placeholder:text-hush focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-quiet mb-1.5;
+  }
+
+  .hint {
+    @apply mt-1.5 text-sm text-quiet;
+  }
+
+  .error {
+    @apply mt-1.5 text-sm text-red-700;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md bg-ink px-3.5 py-2 text-sm font-medium text-white hover:bg-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-40 cursor-pointer;
+  }
+
+  .btn-quiet {
+    @apply inline-flex items-center justify-center rounded-md border border-rule bg-white px-3.5 py-2 text-sm font-medium text-ink hover:border-hush focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 cursor-pointer;
+  }
+
+  .btn-plain {
+    @apply text-sm text-quiet underline hover:text-ink cursor-pointer;
+  }
+
+  /* Rendered Markdown post bodies. Text first: comfortable measure, generous
+     leading, restrained headings. */
+  .prose-kith {
+    @apply font-serif text-[1.0625rem] leading-[1.7] text-ink;
+  }
+  .prose-kith > * + * { @apply mt-4; }
+  .prose-kith h1 { @apply font-sans text-xl font-semibold mt-8; }
+  .prose-kith h2 { @apply font-sans text-lg font-semibold mt-8; }
+  .prose-kith h3, .prose-kith h4, .prose-kith h5, .prose-kith h6 { @apply font-sans text-base font-semibold mt-6; }
+  .prose-kith a { @apply text-accent underline; }
+  .prose-kith ul { @apply list-disc pl-6; }
+  .prose-kith ol { @apply list-decimal pl-6; }
+  .prose-kith li + li { @apply mt-1; }
+  .prose-kith blockquote { @apply border-l-2 border-rule pl-4 text-quiet italic; }
+  .prose-kith code { @apply font-mono text-[0.9em] bg-rule/50 rounded px-1 py-0.5; }
+  .prose-kith pre { @apply font-mono text-sm bg-rule/40 rounded-md p-4 overflow-x-auto; }
+  .prose-kith pre code { @apply bg-transparent p-0; }
+  .prose-kith hr { @apply border-rule my-8; }
+}
