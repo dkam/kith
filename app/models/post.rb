@@ -11,6 +11,8 @@ class Post < ApplicationRecord
 
   belongs_to :actor
 
+  has_many :comments, -> { chronological }, dependent: :destroy
+
   has_many_attached :photos
 
   scope :newest_first, -> { order(published_at: :desc, id: :desc) }

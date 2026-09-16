@@ -1,0 +1,29 @@
+bob_on_alice_followers:
+  post: alice_followers
+  actor: bob
+  body: The coast road is always worth it.
+  created_at: <%= 2.hours.ago.to_fs(:db) %>
+
+carol_on_alice_followers:
+  post: alice_followers
+  actor: carol
+  body: Carol is invisible; only her connections see this.
+  created_at: <%= 90.minutes.ago.to_fs(:db) %>
+
+alice_on_alice_followers:
+  post: alice_followers
+  actor: alice
+  body: Replying to myself, as one does.
+  created_at: <%= 1.hour.ago.to_fs(:db) %>
+
+bob_on_alice_public:
+  post: alice_public
+  actor: bob
+  body: A comment on a public post.
+  created_at: <%= 1.hour.ago.to_fs(:db) %>
+
+carol_on_alice_public:
+  post: alice_public
+  actor: carol
+  body: An invisible member commenting in public.
+  created_at: <%= 45.minutes.ago.to_fs(:db) %>

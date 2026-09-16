@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_060000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -53,6 +53,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_050000) do
     t.index ["handle", "domain"], name: "index_actors_on_handle_and_domain", unique: true
     t.index ["handle"], name: "index_actors_on_local_handle", unique: true, where: "domain IS NULL"
     t.index ["type"], name: "index_actors_on_type"
+  end
+
+  create_table "comments", force: :cascade do |t|
+    t.integer "actor_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.integer "post_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_comments_on_actor_id"
+    t.index ["post_id", "created_at"], name: "index_comments_on_post_id_and_created_at"
+    t.index ["post_id"], name: "index_comments_on_post_id"
   end
 
   create_table "follows", force: :cascade do |t|
@@ -121,6 +132,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_050000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "comments", "actors"
+  add_foreign_key "comments", "posts"
   add_foreign_key "follows", "actors", column: "followed_actor_id"
   add_foreign_key "follows", "actors", column: "follower_actor_id"
   add_foreign_key "invites", "members", column: "claimed_by_member_id"
