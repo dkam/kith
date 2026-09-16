@@ -304,6 +304,15 @@ sends no request body, no cookies, no caller IP, no SQL bind values and no
 query string. Breadcrumbs are limited to `:http_logger`; Kith's own logs carry
 handles and titles. Tracing is off unless `SENTRY_TRACES_SAMPLE_RATE` is set.
 
+**Structured logging is switched off, and this is not optional.** sentry-rails
+7 turns it on by default, and its `ActionController` subscriber attaches `path`
+to *every* request rather than to failing ones — so a perfectly healthy GET of
+`/join/<code>` would post that invite to Splat. Worse, a log event never passes
+through `before_send`, so `ErrorReport` could not see it: errors were scrubbed
+and the access log was not. `before_send_log` is wired to
+`ErrorReport.scrub_log` anyway, because a switch and a hook that disagree is
+how a later "let's just turn logs on" becomes a leak nobody looks for.
+
 The one thing about a member that *is* sent is `ErrorReport.identity` — their
 id, as an integer, and nothing else. "Is this one person or everybody?" is the
 first question anybody asks about an error; a handle answers it no better and

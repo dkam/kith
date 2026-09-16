@@ -71,6 +71,19 @@ class ErrorReport
       nil
     end
 
+    # Sentry's before_send_log. A log event is not an error event and never
+    # passes through before_send, so it needs its own door — and sentry-rails'
+    # ActionController subscriber attaches `path` to *every* request, failing
+    # or not.
+    def scrub_log(log)
+      attributes = log.attributes
+      attributes[:path] = scrub_url(attributes[:path]) if attributes&.dig(:path).present?
+
+      log
+    rescue StandardError
+      nil
+    end
+
     def scrub_url(url)
       match = URL.match(url.to_s)
       return FILTERED if match.nil?

@@ -32,6 +32,13 @@ if ENV["SENTRY_DSN"].present? && !Rails.env.test?
     # them. Outbound HTTP is the useful half and names nobody.
     config.breadcrumbs_logger = [ :http_logger ]
 
+    # Errors, and nothing else. sentry-rails 7 ships Rails' structured logs by
+    # default, and its ActionController subscriber sends the path of *every*
+    # request — so a healthy GET of /join/<code> would post that invite to
+    # Splat, on a request that did not even fail. Kith wants a record of what
+    # broke, not a copy of its access log somewhere else.
+    config.rails.structured_logging.enabled = false
+
     # Tracing is off unless asked for. Forty people do not generate a
     # performance question, and every transaction is another URL to scrub.
     config.traces_sample_rate = ENV.fetch("SENTRY_TRACES_SAMPLE_RATE", 0.0).to_f
@@ -47,6 +54,10 @@ if ENV["SENTRY_DSN"].present? && !Rails.env.test?
 
     config.before_send = ->(event, _hint) { ErrorReport.scrub(event) }
     config.before_send_transaction = ->(event, _hint) { ErrorReport.scrub(event) }
+
+    # Wired even though logs are off above: a switch and a hook that disagree
+    # is how a later "let's just turn logs on" becomes a leak nobody looks for.
+    config.before_send_log = ->(log) { ErrorReport.scrub_log(log) }
   end
 
   Sentry.set_tags(revision: Rails.application.config.x.revision)

@@ -30,6 +30,11 @@ stay in `CLAUDE.md`.
   followed off `/join/<code>` would otherwise carry that code out in the header
   of whatever broke next. A member is sent as an integer id and nothing else.
   Tests never report, whatever the environment says.
+
+  Structured logging is switched off: sentry-rails 7 enables it by default and
+  its ActionController subscriber sends `path` on *every* request, so a healthy
+  GET of `/join/<code>` would have posted that invite — and a log event never
+  passes through `before_send`, so the scrubber could not have seen it.
 - **`bin/build`** builds and pushes the production image, tagged `:vX.Y.Z`,
   `:<sha>` and — for a real release from `main` — `:latest`, then creates the
   matching git tag in the same run. A pre-release (any version with a hyphen)

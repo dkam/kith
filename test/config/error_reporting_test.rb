@@ -24,6 +24,18 @@ class ErrorReportingTest < ActiveSupport::TestCase
     assert_equal "initialized=false", boot("test", dsn: "https://public@splat.example.com/1")
   end
 
+  test "Rails' own request logs are not shipped" do
+    # sentry-rails 7 turns structured logging on by default, and its
+    # ActionController subscriber sends `path` on *every* request rather than
+    # on failing ones. before_send never sees a log event, so ErrorReport
+    # cannot scrub it: /join/<code> would arrive whole, on a request that did
+    # not even fail. Found by watching a smoke-test container 401 against a
+    # real Splat while sending a LogEvent nobody had asked for.
+    assert_equal "structured_logging=false",
+      boot("development", dsn: "https://public@splat.example.com/1",
+        script: 'print "structured_logging=#{Sentry.configuration.rails.structured_logging.enabled?}"')
+  end
+
   # --- The scrubber is not optional -----------------------------------------
 
   test "nothing is sent that ErrorReport has not scrubbed" do
@@ -32,6 +44,10 @@ class ErrorReportingTest < ActiveSupport::TestCase
     # Both hooks, or the half that isn't routed becomes the way a URL gets out.
     assert_match(/config\.before_send\s*=.*ErrorReport\.scrub/, source)
     assert_match(/config\.before_send_transaction\s*=.*ErrorReport\.scrub/, source)
+
+    # Logs are off above, but a hook that disagrees with the switch is how a
+    # later "just turn logs on" becomes a leak nobody looked for.
+    assert_match(/config\.before_send_log\s*=.*ErrorReport\.scrub_log/, source)
   end
 
   # Pinned by reading the source rather than by watching it happen: observing
@@ -55,8 +71,7 @@ class ErrorReportingTest < ActiveSupport::TestCase
 
   private
     # A real boot, in a real environment, reporting one fact.
-    def boot(env, dsn:)
-      script = 'print "initialized=#{Sentry.initialized?}"'
+    def boot(env, dsn:, script: 'print "initialized=#{Sentry.initialized?}"')
       out = Bundler.with_unbundled_env do
         `cd #{Rails.root.to_s.shellescape} && RAILS_ENV=#{env} SENTRY_DSN=#{dsn.shellescape} bin/rails runner #{script.shellescape} 2>&1`
       end

@@ -109,6 +109,21 @@ class ErrorReportTest < ActiveSupport::TestCase
     assert_equal "text/html", event.request.headers["Accept"]
   end
 
+  # --- Log events -----------------------------------------------------------
+
+  test "a log event's path is scrubbed like any other" do
+    log = fake_log(path: "/join/D5PKJ8A4QBWN")
+
+    assert_same log, ErrorReport.scrub_log(log)
+    assert_equal "/join/[filtered]", log.attributes[:path]
+  end
+
+  test "a log event with nothing to scrub is passed through" do
+    log = fake_log(path: nil)
+
+    assert_same log, ErrorReport.scrub_log(log)
+  end
+
   # --- The event ------------------------------------------------------------
 
   test "scrubbing an event rewrites the request it carries" do
@@ -147,6 +162,12 @@ class ErrorReportTest < ActiveSupport::TestCase
     def assert_unchanged(path)
       url = "https://kith.example.com#{path}"
       assert_equal url, ErrorReport.scrub_url(url), "#{path} holds no secret and no name"
+    end
+
+    FakeLog = Struct.new(:attributes)
+
+    def fake_log(path:)
+      FakeLog.new({ path: path, controller: "PostsController" }.compact)
     end
 
     FakeRequest = Struct.new(:url, :query_string, :headers)
