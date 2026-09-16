@@ -1,0 +1,23 @@
+<% content_for :title, @post.excerpt(length: 60) %>
+
+<article>
+  <%= render "posts/byline", post: @post %>
+
+  <% if @post.title.present? %>
+    <h1 class="mt-4 font-serif text-3xl font-semibold leading-tight"><%= @post.title %></h1>
+  <% end %>
+
+  <% if @post.body_html.present? %>
+    <div class="prose-kith mt-4"><%= @post.rendered_body %></div>
+  <% end %>
+
+  <%= render "posts/photos", post: @post %>
+
+  <% if @post.actor_id == current_actor&.id %>
+    <div class="mt-8 flex items-center gap-5 border-t border-rule pt-5">
+      <%= link_to "Edit", edit_post_path(@post), class: "btn-plain" %>
+      <%= button_to "Delete", @post, method: :delete, class: "btn-plain",
+            form: { data: { turbo_confirm: "Delete this post and its photos? This can't be undone." } } %>
+    </div>
+  <% end %>
+</article>

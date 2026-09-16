@@ -1,0 +1,7 @@
+<%# A name is always shown. Whether it links is Visibility's decision, and this
+    partial is the only place in the app that asks. %>
+<% if visibility.profile_link?(actor) %>
+  <%= link_to actor.to_s, profile_path(actor.handle), class: "font-medium no-underline hover:text-accent" %>
+<% else %>
+  <span class="font-medium"><%= actor.to_s %></span>
+<% end %>

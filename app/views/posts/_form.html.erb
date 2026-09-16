@@ -1,0 +1,91 @@
+<%= form_with model: post, class: "mt-8 space-y-6", data: {
+      controller: "uploads",
+      action: "dragover->uploads#dragover dragenter->uploads#dragenter dragleave->uploads#dragleave drop->uploads#drop " \
+              "direct-upload:start->uploads#uploadStart direct-upload:progress->uploads#uploadProgress " \
+              "direct-upload:error->uploads#uploadError direct-upload:end->uploads#uploadEnd"
+    } do |form| %>
+  <% if post.errors.any? %>
+    <div class="rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
+      <ul class="list-disc space-y-1 pl-4">
+        <% post.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :title, "Title", class: "label" %>
+    <%= form.text_field :title, autocomplete: "off", placeholder: "Optional", class: "field" %>
+  </div>
+
+  <div>
+    <%= form.label :body, "Words", class: "label" %>
+    <%= form.text_area :body, rows: 14, class: "field font-serif leading-relaxed",
+          data: { uploads_target: "body" } %>
+    <p class="hint">Markdown works: **bold**, _italic_, [links](https://example.com), lists, &gt; quotes.</p>
+  </div>
+
+  <div data-uploads-target="dropzone"
+       class="rounded-md border border-dashed border-rule p-5 transition-colors"
+       data-drag-class="border-accent bg-accent/5">
+    <span class="label">Photos</span>
+
+    <%= form.file_field :photos, multiple: true, direct_upload: true,
+          accept: "image/jpeg,image/png,image/webp,image/heic",
+          data: { uploads_target: "input", action: "uploads#preview" },
+          class: "text-sm text-quiet file:mr-3 file:rounded-md file:border file:border-rule file:bg-white file:px-3 file:py-1.5 file:text-sm file:text-ink" %>
+
+    <p class="hint" data-uploads-target="status">
+      Drop photos here, or choose them. Location and camera data are removed.
+    </p>
+
+    <ul data-uploads-target="list" class="mt-3 grid grid-cols-3 gap-2 empty:mt-0"></ul>
+
+    <% if post.persisted? && post.photos.attached? %>
+      <ul class="mt-3 grid grid-cols-3 gap-2">
+        <% post.photos.attachments.each do |photo| %>
+          <li class="relative">
+            <%= media_image_tag photo, variant: :thumb, alt: "",
+                  class: "aspect-square w-full rounded-md border border-rule object-cover" %>
+          </li>
+        <% end %>
+      </ul>
+      <p class="hint">Photos already on this post stay. Adding more appends to them.</p>
+    <% end %>
+  </div>
+
+  <% if post.new_record? %>
+    <fieldset class="border-t border-rule pt-6">
+      <legend class="label">Who is this for</legend>
+      <div class="space-y-3">
+        <label class="flex items-baseline gap-3">
+          <%= form.radio_button :audience, :followers, checked: true, class: "mt-1 accent-[var(--color-accent)]" %>
+          <span>
+            <span class="text-sm font-medium">People who follow me</span>
+            <span class="block text-sm text-quiet">Stays here, between the people you've accepted.</span>
+          </span>
+        </label>
+        <label class="flex items-baseline gap-3">
+          <%= form.radio_button :audience, :public, class: "mt-1 accent-[var(--color-accent)]" %>
+          <span>
+            <span class="text-sm font-medium">Anyone with the link</span>
+            <span class="block text-sm text-quiet">Readable without an account. This is the only kind of post that leaves this server.</span>
+          </span>
+        </label>
+      </div>
+      <p class="hint">You're choosing this once. It can't be changed after you post.</p>
+    </fieldset>
+  <% else %>
+    <p class="border-t border-rule pt-6 text-sm text-quiet">
+      This post is
+      <span class="font-medium text-ink"><%= post.audience_public? ? "readable by anyone with the link" : "for people who follow you" %></span>.
+      That was fixed when you wrote it and can't be changed.
+    </p>
+  <% end %>
+
+  <div class="flex items-center gap-5">
+    <%= form.submit post.new_record? ? "Post" : "Save", class: "btn", data: { uploads_target: "submit" } %>
+    <%= link_to "Cancel", post.persisted? ? post_path(post) : root_path, class: "btn-plain" %>
+  </div>
+<% end %>

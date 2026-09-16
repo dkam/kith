@@ -1,0 +1,16 @@
+<%# A post as it appears in a list: the feed, or someone's profile. %>
+<article class="py-8" id="<%= dom_id post %>">
+  <%= render "posts/byline", post: post %>
+
+  <% if post.title.present? %>
+    <h2 class="mt-3 font-serif text-xl font-semibold">
+      <%= link_to post.title, post, class: "no-underline hover:text-accent" %>
+    </h2>
+  <% end %>
+
+  <% if post.body_html.present? %>
+    <div class="prose-kith mt-3"><%= post.rendered_body %></div>
+  <% end %>
+
+  <%= render "posts/photos", post: post %>
+</article>

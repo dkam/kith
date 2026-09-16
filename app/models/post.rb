@@ -33,6 +33,14 @@ class Post < ApplicationRecord
 
   def local? = !remote?
 
+  # Safe to render unescaped because body_html is only ever written by
+  # render_body, below, which puts it through Markdown.render's allowlist
+  # sanitiser. The assertion lives here, next to the guarantee, rather than as
+  # a .html_safe scattered across templates.
+  def rendered_body
+    body_html.to_s.html_safe
+  end
+
   def excerpt(length: 160)
     title.presence || Markdown.excerpt(body, length: length)
   end

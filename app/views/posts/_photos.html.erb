@@ -1,0 +1,11 @@
+<% photos = post.photos.attachments %>
+<% if photos.any? %>
+  <div class="mt-4 grid gap-2 <%= photos.size > 1 ? "grid-cols-2" : "grid-cols-1" %>">
+    <% photos.each do |photo| %>
+      <%= link_to media_url_for(photo, variant: :full), class: "block", target: "_blank", rel: "noopener" do %>
+        <%= media_image_tag photo, variant: :feed, alt: "", loading: "lazy",
+              class: "w-full rounded-md border border-rule bg-rule object-cover" %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

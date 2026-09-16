@@ -12,6 +12,8 @@ Rails.application.routes.draw do
 
   resource :settings, only: %i[ show update ], controller: "settings"
 
+  resources :posts, except: :index
+
   # Images are never served from a blob URL: see MediaController.
   get "media/:signed_id/:variant", to: "media#show", as: :media, format: false,
     constraints: { signed_id: %r{[^/]+}, variant: /thumb|feed|full/ }
