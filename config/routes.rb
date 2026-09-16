@@ -12,7 +12,10 @@ Rails.application.routes.draw do
 
   resource :settings, only: %i[ show update ], controller: "settings"
 
-  resources :posts, except: :index
+  resources :posts, except: :index do
+    resources :comments, only: :create
+  end
+  resources :comments, only: :destroy
 
   resources :feed_items, only: :update do
     collection { post :read_all }

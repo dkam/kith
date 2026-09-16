@@ -1,0 +1,13 @@
+<section class="mt-12 border-t border-rule pt-8">
+  <h2 class="font-serif text-lg font-semibold">
+    <%= comments.size.zero? ? "No replies yet" : pluralize(comments.size, "reply", plural: "replies") %>
+  </h2>
+
+  <ul id="<%= dom_id post, :comments %>" class="mt-2 divide-y divide-rule">
+    <%= render partial: "comments/comment", collection: comments %>
+  </ul>
+
+  <% if authenticated? %>
+    <%= render "comments/form", post: post, comment: comment %>
+  <% end %>
+</section>

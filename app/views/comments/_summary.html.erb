@@ -1,0 +1,7 @@
+<% count = visibility.visible_comments(post).size %>
+<% if count.positive? %>
+  <p class="mt-4 text-sm">
+    <%= link_to pluralize(count, "reply", plural: "replies"), post_path(post, anchor: dom_id(post, :comments)),
+          class: "text-quiet no-underline hover:text-ink" %>
+  </p>
+<% end %>

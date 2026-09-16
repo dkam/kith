@@ -1,0 +1,18 @@
+<%= form_with model: [ post, comment ], id: dom_id(post, :comment_form), class: "mt-6 flex gap-3" do |form| %>
+  <%= avatar_tag current_actor, css_class: "size-8 rounded-full object-cover bg-rule shrink-0" %>
+
+  <div class="min-w-0 flex-1">
+    <%= form.label :body, "Reply", class: "sr-only" %>
+    <%= form.text_area :body, rows: 2, class: "field", placeholder: "Say something",
+          data: { controller: "autogrow", action: "input->autogrow#resize" } %>
+
+    <% if comment.errors.any? %>
+      <p class="error"><%= comment.errors.full_messages.to_sentence %></p>
+    <% end %>
+
+    <div class="mt-2 flex items-baseline gap-4">
+      <%= form.submit "Reply", class: "btn" %>
+      <span class="hint">Visible to everyone who can see this post.</span>
+    </div>
+  </div>
+<% end %>

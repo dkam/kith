@@ -1,0 +1,19 @@
+<li class="flex gap-3 py-4" id="<%= dom_id comment %>">
+  <%= avatar_tag comment.actor, css_class: "size-8 rounded-full object-cover bg-rule shrink-0" %>
+
+  <div class="min-w-0 flex-1">
+    <p class="text-sm">
+      <%# The name is always shown. Whether it links is Visibility's call. %>
+      <%= render "shared/actor_name", actor: comment.actor %>
+      <span class="text-hush">·</span>
+      <time class="text-quiet" datetime="<%= comment.created_at.iso8601 %>"><%= time_ago_in_words comment.created_at %> ago</time>
+    </p>
+
+    <p class="mt-1 whitespace-pre-line text-[0.9375rem] leading-relaxed"><%= comment.body %></p>
+  </div>
+
+  <% if comment.actor_id == current_actor&.id || comment.post.actor_id == current_actor&.id %>
+    <%= button_to "Delete", comment_path(comment), method: :delete, class: "btn-plain shrink-0 self-start",
+          form: { data: { turbo_confirm: "Delete this reply?" } } %>
+  <% end %>
+</li>

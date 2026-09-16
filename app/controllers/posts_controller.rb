@@ -4,6 +4,8 @@ class PostsController < ApplicationController
   before_action :require_author, only: %i[ edit update destroy ]
 
   def show
+    @comments = visibility.visible_comments(@post).includes(:actor)
+    @comment = Comment.new(post: @post)
   end
 
   def new
