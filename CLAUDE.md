@@ -17,6 +17,9 @@ federation now**. Leave the seams; don't build the bridge.
   **No Node build step.**
 - Tailwind via `tailwindcss-rails`. Hotwire (Turbo + Stimulus) used heavily:
   Turbo Frames/Streams for feed, comments and follow state. Minimal custom JS.
+- Action Text for post bodies, with **Lexxy** as the editor — not Trix. Bodies
+  are HTML, written in the editor and stored as written. There is no Markdown
+  in the database; Lexxy's Markdown *shortcuts* are an input convenience.
 - Auth from `bin/rails generate authentication`. **Not Devise.** Email/password
   now; passkeys later.
 - Active Storage with `rails_storage_proxy` route resolution and
@@ -29,7 +32,8 @@ federation now**. Leave the seams; don't build the bridge.
 Beyond the Rails defaults, only:
 
 - `image_processing` — Active Storage variants, EXIF stripping.
-- `commonmarker` — Markdown rendering (approved 2026-09-16).
+- `lexxy` — the Action Text editor (approved 2026-09-16, replacing
+  `commonmarker` and Markdown storage).
 - `json` pinned to `~> 2.7` — Ruby 4.0 ships json 3.x as a default gem, and its
   `JSON.parse` arity change breaks `ActiveSupport::JSON.decode`, which every
   signed cookie goes through. Remove the pin when Rails supports json 3.
@@ -85,10 +89,11 @@ Integer primary keys. Don't reach for UUIDs.
   Everything that can author or be followed is an actor, local or not.
 - **`members`** — credentials and email; `belongs_to :actor`. Local members
   always have an actor; remote actors never have a member.
-- **`posts`** — `belongs_to :actor`; `title` (optional), `body` (Markdown),
-  `body_html` (rendered server-side and sanitised at write time), `audience`
-  enum, `published_at`, `uri` (nullable now; will hold the ActivityPub id),
-  `remote` boolean.
+- **`posts`** — `belongs_to :actor`; `title` (optional), `audience` enum,
+  `published_at`, `uri` (nullable now; will hold the ActivityPub id), `remote`
+  boolean. The body is **not** a column: `has_rich_text :body` puts it in
+  `action_text_rich_texts`, and the post's photographs hang off that rich text
+  as Active Storage embeds, in the places the author put them.
 - **`follows`** — `follower_actor_id`, `followed_actor_id`, `state`,
   `accepted_at`. Unique on the pair.
 - **`comments`** — `post_id`, `actor_id`, `body`.
@@ -108,8 +113,11 @@ Integer primary keys. Don't reach for UUIDs.
   its actor.
 - `notifications.kind` was added. `new_follower` and `follow_accepted` both
   point at a `Follow` subject and are otherwise indistinguishable.
-- `posts.body_html` was added. Rendering Markdown server-side at write time, per
-  the brief, means storing the result.
+- `posts.body`/`body_html` are gone. The brief assumed Markdown in, HTML out;
+  the editor now produces HTML directly, so Action Text holds it and the two
+  columns have nothing left to say. Photographs moved with it: they were a
+  `has_many_attached :photos` tray under the post, and are now embedded in the
+  body, which is why `Post#photos` reads `body.embeds_attachments`.
 - `feed_items.posted_at` was added, copied from the post. The feed is ordered by
   when something was *written*, not by when it was fanned out — otherwise
   back-filling an accepted follow drops old posts at the top of the reader's
@@ -133,6 +141,19 @@ Integer primary keys. Don't reach for UUIDs.
   `ActiveStorage::Attachment#signed_id` is delegated to the blob, which
   identifies the *file* rather than the attachment hanging it off a particular
   post — and visibility is a property of the attachment.
+- **Lexxy will hand out blob URLs unless you stop it, in two places.** It sends
+  the URL it previewed each photo from back with the post, in the
+  `<action-text-attachment url="...">` attribute; `Post#forget_attachment_urls`
+  drops it before the body is stored, `MediaHelper#editable_body_html` puts a
+  media URL back when the author reopens the editor, and `url` is left out of
+  the Action Text sanitiser's allowlist so a stray one could never reach a
+  reader anyway. It also previews a *freshly uploaded* photo, before any post
+  owns it, from `data-blob-url-template` — which the composer points at
+  `MediaController#pending`, a route that requires a session and stops
+  answering the moment a post claims the photo.
+- **`StripMetadataJob` rewrites the blob in place** rather than swapping in a
+  new one. The body names each photograph by the blob's signed global id, so
+  the blob has to keep its identity or the post renders with a hole in it.
 - **Strip EXIF on upload, including GPS**, in two layers: every variant is
   re-encoded by vips with metadata stripped, and `StripMetadataJob` rewrites the
   original behind it (direct upload means the original is in storage before the
@@ -217,8 +238,9 @@ bin/rails kith:setup_code   # reprint the setup code, while nobody has joined
 2. Authentication, invites (issue, claim, expire), first member from the
    console setup code (and the rake task), profile settings (display name,
    avatar, discoverable).
-3. Posts: create/edit/delete, title, Markdown body, multiple photos
-   (drag-and-drop via Stimulus + direct upload), audience selector, permalink.
+3. Posts: create/edit/delete, title, rich text body written in Lexxy with
+   photographs embedded in the prose (drag, paste or pick; direct upload),
+   audience selector, permalink.
 4. Follows: request, accept, reject, unfollow, follow back, with Turbo Stream
    button updates.
 5. Reader: chronological feed of accepted-follows' posts plus own posts, unread
@@ -255,3 +277,14 @@ passkeys, search, DMs.
 - **Only ever run one test process against `storage/test.sqlite3` at a time.**
   A second one produces `SQLite3::BusyException` that surfaces as unrelated,
   baffling failures five seconds later.
+- **A photo appears in the composer before its upload has finished.** Lexxy
+  draws it from a local preview the moment it is chosen, and the signed id that
+  names it in the post only arrives when the direct upload returns. Submitting
+  in between posts the words without the photographs, silently, because the
+  editor is showing them. `drop_photos` in the system tests waits for the
+  `/media/pending/` URL, which is the first thing that proves the upload is
+  done.
+- **Lexxy's stylesheet is unlayered, and unlayered CSS beats every cascade
+  layer** however specific the layered selector is. Overrides for it therefore
+  sit outside `@layer components` in `app/assets/tailwind/application.css`;
+  inside, they are silently ignored.

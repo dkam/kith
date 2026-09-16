@@ -4,7 +4,7 @@ class FeedController < ApplicationController
 
   def show
     items = current_member.feed_items.before(params[:before]).newest_first
-      .includes(post: [ :actor, { photos_attachments: :blob } ])
+      .includes(post: [ :actor, { rich_text_body: { embeds_attachments: :blob } } ])
       .limit(PAGE_SIZE + 1)
       .to_a
 

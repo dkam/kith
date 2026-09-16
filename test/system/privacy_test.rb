@@ -68,9 +68,7 @@ class PrivacyTest < ApplicationSystemTestCase
   end
 
   test "a photo on a private post is not served to someone outside the audience" do
-    posts(:alice_followers).photos.attach(
-      io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg")
-    photo_path = media_path(AttachableMedia.signed_id(posts(:alice_followers).photos.first), :feed)
+    photo_path = media_path(AttachableMedia.signed_id(embed_photo(posts(:alice_followers))), :feed)
 
     sign_in_as members(:dave)
     visit photo_path

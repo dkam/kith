@@ -3,10 +3,8 @@ class CreatePosts < ActiveRecord::Migration[8.1]
     create_table :posts do |t|
       t.references :actor, null: false, foreign_key: true
       t.string :title
-      t.text :body, null: false, default: ""
-      # Markdown rendered and sanitised at write time, so no request ever pays
-      # for it and no unsanitised HTML is ever a template away from the page.
-      t.text :body_html, null: false, default: ""
+      # The body is an Action Text rich text, not a column: it is HTML written
+      # in the editor, and it owns the photos embedded in it.
       # Fixed when the post is written and never changed. Circles come later.
       t.integer :audience, null: false, default: 0
       t.datetime :published_at, null: false

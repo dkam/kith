@@ -10,7 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_090000) do
+  create_table "action_text_rich_texts", force: :cascade do |t|
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.bigint "record_id", null: false
+    t.string "record_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["record_type", "record_id", "name"], name: "index_action_text_rich_texts_uniqueness", unique: true
+  end
+
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -138,8 +148,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_080000) do
   create_table "posts", force: :cascade do |t|
     t.integer "actor_id", null: false
     t.integer "audience", default: 0, null: false
-    t.text "body", default: "", null: false
-    t.text "body_html", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "published_at", null: false
     t.boolean "remote", default: false, null: false

@@ -21,8 +21,6 @@ class StripMetadataJob < ApplicationJob
     blob = attachment.blob
     return unless STRIPPABLE_TYPES.include?(blob.content_type)
 
-    original = blob
-
     blob.open do |file|
       # Rotate first: stripping the metadata loses the flag that says which way
       # is up.
@@ -32,16 +30,26 @@ class StripMetadataJob < ApplicationJob
         .saver(strip: true)
         .call
 
-      attachment.update!(blob: ActiveStorage::Blob.create_and_upload!(
-        io: stripped,
-        filename: blob.filename,
-        content_type: blob.content_type,
-        identify: false
-      ))
+      overwrite blob, stripped
     end
-
-    original.purge_later
   rescue ActiveStorage::FileNotFoundError
     # The post was deleted while this was queued. Nothing to strip.
   end
+
+  private
+    # The same blob, with new bytes — not a new blob standing in for it.
+    #
+    # A photo embedded in a post body is named there by the blob's signed global
+    # id, so the blob has to keep its identity: replacing the record and purging
+    # the original would leave the body pointing at something that no longer
+    # exists, and the post would render with a hole in it.
+    def overwrite(blob, io)
+      blob.upload io, identify: false
+      blob.save!
+
+      # Any variant generated from the original is now stale. There is usually
+      # nothing here — this runs within moments of the upload, and variants are
+      # only made when someone asks for one.
+      blob.variant_records.destroy_all
+    end
 end

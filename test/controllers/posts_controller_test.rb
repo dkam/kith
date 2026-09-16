@@ -5,31 +5,56 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as members(:alice)
 
     assert_difference -> { Post.count }, 1 do
-      post posts_url, params: { post: { title: "A morning", body: "It **rained**.", audience: "followers" } }
+      post posts_url, params: { post: { title: "A morning", body: "<p>It <strong>rained</strong>.</p>", audience: "followers" } }
     end
 
     written = Post.newest_first.first
     assert_redirected_to written
     assert_equal actors(:alice), written.actor
-    assert_includes written.body_html, "<strong>rained</strong>"
+    assert_includes written.body.to_s, "<strong>rained</strong>"
   end
 
   test "writing a public post" do
     sign_in_as members(:alice)
-    post posts_url, params: { post: { body: "Hello world", audience: "public" } }
+    post posts_url, params: { post: { body: "<p>Hello world</p>", audience: "public" } }
 
     assert Post.newest_first.first.audience_public?
   end
 
+  # Photos are uploaded by the editor before the form is submitted, so what
+  # arrives here is markup naming two blobs that already exist.
   test "writing a post with photos" do
     sign_in_as members(:alice)
+    blobs = [ photo_blob(filename: "landscape.jpg"), photo_blob(filename: "portrait.jpg") ]
 
     post posts_url, params: { post: {
-      body: "Two photos",
-      photos: [ fixture_file_upload("landscape.jpg", "image/jpeg"), fixture_file_upload("portrait.jpg", "image/jpeg") ]
+      body: "<p>Two photos</p>#{blobs.map { |blob| attachment_markup(blob) }.join}"
     } }
 
     assert_equal 2, Post.newest_first.first.photos.count
+  end
+
+  # Lexxy previews an upload from its Active Storage blob URL and sends that URL
+  # back with the post. It is a bearer token — it works for anyone holding it,
+  # and it answers no question about who is asking — so it is dropped before the
+  # body is stored, and never reaches a reader.
+  test "the blob URL the editor sends is neither stored nor rendered" do
+    sign_in_as members(:alice)
+    blob = photo_blob
+    blob_url = "/rails/active_storage/blobs/proxy/#{blob.signed_id}/#{blob.filename}"
+
+    post posts_url, params: { post: {
+      body: "<p>One photo</p>#{attachment_markup(blob, url: blob_url)}", audience: "public"
+    } }
+
+    written = Post.newest_first.first
+    refute_includes written.body.body.to_html, blob_url
+    refute_includes written.body.body.to_html, "/rails/active_storage/"
+
+    get post_url(written)
+    assert_select "img[src^='/media/']"
+    assert_select "img[src*='/rails/active_storage/']", false
+    refute_includes response.body, "/rails/active_storage/"
   end
 
   test "an empty post is refused" do
@@ -46,17 +71,17 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as members(:alice)
     target = posts(:alice_followers)
 
-    patch post_url(target), params: { post: { body: "Edited", audience: "public" } }
+    patch post_url(target), params: { post: { body: "<p>Edited</p>", audience: "public" } }
 
     assert_redirected_to target
     assert target.reload.audience_followers?
-    assert_includes target.body_html, "Edited"
+    assert_includes target.body.to_s, "Edited"
   end
 
   test "deleting a post takes its photos with it" do
     sign_in_as members(:alice)
     target = posts(:alice_followers)
-    target.photos.attach(io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg")
+    embed_photo(target)
 
     assert_difference [ -> { Post.count }, -> { ActiveStorage::Attachment.count } ], -1 do
       delete post_url(target)
@@ -72,7 +97,7 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
     get edit_post_url(target)
     assert_response :not_found
 
-    patch post_url(target), params: { post: { body: "Not mine to edit" } }
+    patch post_url(target), params: { post: { body: "<p>Not mine to edit</p>" } }
     assert_response :not_found
 
     assert_no_difference -> { Post.count } do
@@ -124,7 +149,7 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "photos on a permalink are rendered through MediaController" do
-    posts(:alice_public).photos.attach(io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg")
+    embed_photo(posts(:alice_public))
 
     get post_url(posts(:alice_public))
 

@@ -1,34 +1,28 @@
 alice_followers:
   actor: alice
   title: The long way round
-  body: |
-    We took the **coast road** instead. Four hours longer, and worth it.
   audience: followers
   published_at: <%= 3.hours.ago.to_fs(:db) %>
 
 alice_public:
   actor: alice
   title: On keeping a notebook
-  body: A public note, readable by anyone with the link.
   audience: public
   published_at: <%= 2.hours.ago.to_fs(:db) %>
 
 bob_followers:
   actor: bob
-  body: No title on this one, just a thought.
   audience: followers
   published_at: <%= 1.hour.ago.to_fs(:db) %>
 
 carol_followers:
   actor: carol
   title: Quietly
-  body: Carol is invisible and posts to followers only.
   audience: followers
   published_at: <%= 30.minutes.ago.to_fs(:db) %>
 
 dave_followers:
   actor: dave
   title: Nobody follows Dave
-  body: Dave follows Alice, but that request is still pending.
   audience: followers
   published_at: <%= 10.minutes.ago.to_fs(:db) %>

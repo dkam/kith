@@ -7,7 +7,7 @@
 # through here, where the post's audience is re-checked against the current
 # member at request time.
 class MediaController < ApplicationController
-  allow_unauthenticated_access
+  allow_unauthenticated_access only: :show
 
   # An unauthorised request gets 404, not 403. A 403 confirms the attachment
   # exists, which is itself a leak: it tells you your guess was right.
@@ -22,19 +22,35 @@ class MediaController < ApplicationController
     return not_found unless AttachableMedia.variant?(params[:variant])
     return not_found unless visibility.attachment?(attachment)
 
-    send_variant attachment
+    set_cache_headers attachment
+    send_variant attachment.blob, params[:variant], filename: attachment.filename
+  end
+
+  # A photograph the editor has uploaded but no post has claimed yet.
+  #
+  # Lexxy previews an upload from Active Storage's own blob URL, which is a
+  # permanent, unauthenticated link to the file — and it goes on working long
+  # after the photo has been published to twelve people. This is the same
+  # picture with two differences: you have to be signed in, and it stops
+  # answering the moment the photo belongs to a post, from which point the
+  # post's audience is the only thing that decides.
+  def pending
+    blob = ActiveStorage::Blob.find_signed!(params[:signed_id])
+
+    return not_found if blob.attachments.any?
+
+    response.headers["Cache-Control"] = "private, no-store"
+    send_variant blob, AttachableMedia::DEFAULT_VARIANT, filename: blob.filename
   end
 
   private
-    def send_variant(attachment)
-      variant = attachment.variant(AttachableMedia.transformation_for(params[:variant])).processed
-
-      set_cache_headers attachment
+    def send_variant(blob, variant_name, filename:)
+      variant = blob.variant(AttachableMedia.transformation_for(variant_name)).processed
 
       send_data variant.download,
         type: variant.blob.content_type,
         disposition: :inline,
-        filename: attachment.filename.to_s
+        filename: filename.to_s
     end
 
     # Private media must not be written to a shared cache, nor left in the
@@ -50,7 +66,7 @@ class MediaController < ApplicationController
     end
 
     def public_media?(attachment)
-      attachment.record.is_a?(Post) && attachment.record.audience_public?
+      AttachableMedia.post_for(attachment)&.audience_public?
     end
 
     def not_found

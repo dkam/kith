@@ -36,6 +36,27 @@ module AttachableMedia
     ActiveStorage::Attachment.find(verifier.verify(signed_id))
   end
 
+  # Action Text renders an embedded photo through a partial that is handed the
+  # blob and nothing else, but a media id is signed from the attachment. One
+  # query per photo, which is the price of not signing the blob: the same file
+  # embedded in two posts is two attachments with two audiences, and a blob id
+  # could not say which one was being asked for.
+  def self.attachment_for_blob(blob)
+    ActiveStorage::Attachment.find_by(
+      blob_id: blob.id, record_type: "ActionText::RichText", name: "embeds"
+    )
+  end
+
+  # The post an attachment belongs to, or nil. A photo hangs off the rich text
+  # body rather than off the post directly, and visibility is a property of the
+  # post — so this is the one place that walks from a file back to it.
+  def self.post_for(attachment)
+    record = attachment&.record
+    return unless record.is_a?(ActionText::RichText)
+
+    record.record if record.record.is_a?(Post)
+  end
+
   def self.verifier
     @verifier ||= ActiveSupport::MessageVerifier.new(
       Rails.application.key_generator.generate_key("kith/media"),

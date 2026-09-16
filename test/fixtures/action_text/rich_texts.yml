@@ -1,0 +1,26 @@
+# Post bodies. Action Text keeps them in their own table, so they are their own
+# fixture file: `record` names the post, `name` is the attribute.
+alice_followers_body:
+  record: alice_followers (Post)
+  name: body
+  body: <p>We took the <strong>coast road</strong> instead. Four hours longer, and worth it.</p>
+
+alice_public_body:
+  record: alice_public (Post)
+  name: body
+  body: <p>A public note, readable by anyone with the link.</p>
+
+bob_followers_body:
+  record: bob_followers (Post)
+  name: body
+  body: <p>No title on this one, just a thought.</p>
+
+carol_followers_body:
+  record: carol_followers (Post)
+  name: body
+  body: <p>Carol is invisible and posts to followers only.</p>
+
+dave_followers_body:
+  record: dave_followers (Post)
+  name: body
+  body: <p>Dave follows Alice, but that request is still pending.</p>

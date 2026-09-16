@@ -1,7 +1,7 @@
 class Post < ApplicationRecord
-  include AttachableMedia
-
-  BODY_LIMIT = 40_000
+  # The cap is on the markup rather than on what was typed, because the markup
+  # is what has to be stored, sanitised and — one day — sent somewhere else.
+  BODY_LIMIT = 200_000
   TITLE_LIMIT = 200
   PHOTO_LIMIT = 20
 
@@ -11,24 +11,28 @@ class Post < ApplicationRecord
 
   belongs_to :actor
 
+  # The body is HTML, written in the editor. It carries the post's photographs
+  # inside it, as Action Text embeds, so a photo sits where its author put it
+  # rather than in a tray underneath.
+  has_rich_text :body, store_if_blank: false
+
   has_many :comments, -> { chronological }, dependent: :destroy
   has_many :feed_items, dependent: :delete_all
   has_many :notifications, as: :subject, dependent: :delete_all
 
-  has_many_attached :photos
-
   scope :newest_first, -> { order(published_at: :desc, id: :desc) }
   scope :by, ->(actors) { where(actor: actors) }
   scope :publicly_visible, -> { where(audience: :public) }
+  scope :readable, -> { with_rich_text_body_and_embeds.includes(:actor) }
 
   after_create_commit :fan_out
 
   before_validation :set_published_at, on: :create
-  before_validation :render_body
+  before_save :forget_attachment_urls
 
-  validates :body, length: { maximum: BODY_LIMIT }
   validates :title, length: { maximum: TITLE_LIMIT }
   validates :published_at, presence: true
+  validate :body_is_not_enormous
   validate :must_say_something
   validate :photo_count_is_sane
   validate :audience_is_immutable, on: :update
@@ -37,16 +41,19 @@ class Post < ApplicationRecord
 
   def local? = !remote?
 
-  # Safe to render unescaped because body_html is only ever written by
-  # render_body, below, which puts it through Markdown.render's allowlist
-  # sanitiser. The assertion lives here, next to the guarantee, rather than as
-  # a .html_safe scattered across templates.
-  def rendered_body
-    body_html.to_s.html_safe
+  # The photographs embedded in the body, as Active Storage attachments —
+  # which is what MediaController serves and what Visibility checks.
+  def photos
+    body.embeds_attachments
   end
 
+  def photo_count = photo_blobs.size
+
+  # A one-line summary for a page title, a feed heading or a notification.
+  # Never the markup, and never a filename: a post that is only photographs
+  # says so in words.
   def excerpt(length: 160)
-    title.presence || Markdown.excerpt(body, length: length)
+    title.presence || plain_body.truncate(length).presence || photo_summary
   end
 
   # Whether the post is readable by someone with no account at all. Only public
@@ -62,18 +69,60 @@ class Post < ApplicationRecord
       self.published_at ||= Time.current
     end
 
-    def render_body
-      self.body_html = Markdown.render(body) if body_changed? || body_html.blank?
+    # Lexxy sends each embedded photo with the Active Storage blob URL it drew
+    # the preview from. That URL is a bearer token: it works for anyone holding
+    # it, for as long as the file exists, and it answers no question about who
+    # is asking. Photos are served by MediaController, which re-checks the
+    # post's audience on every request, so the URL is dropped before the body is
+    # stored — and put back, by MediaHelper, only when the author opens the
+    # editor again.
+    #
+    # It runs before_save rather than before_validation so that a post which
+    # fails to save re-renders the editor with the photos still showing.
+    def forget_attachment_urls
+      return unless body.body
+
+      stripped = body.body.fragment.replace(ActionText::Attachment.tag_name) do |node|
+        node.tap { |attachment| attachment.remove_attribute("url") }
+      end.to_html
+
+      self.body = stripped unless stripped == body.body.to_html
+    end
+
+    # to_plain_text renders an embedded photo as "[beach.jpg]", which is a
+    # filename rather than a sentence. Take the photos out before flattening.
+    def plain_body
+      return "" unless body.body
+
+      body.body.fragment
+        .update { |source| source.css(ActionText::Attachment.tag_name).each(&:remove) }
+        .to_plain_text.squish
+    end
+
+    def photo_blobs
+      body.body&.attachables&.grep(ActiveStorage::Blob) || []
+    end
+
+    def photo_summary
+      case photo_count
+      when 0 then ""
+      when 1 then "A photo"
+      else "#{photo_count} photos"
+      end
     end
 
     def must_say_something
-      return if body.present? || title.present? || photos.attached?
+      return if title.present? || body.present?
 
       errors.add(:base, "A post needs a title, something to say, or a photo.")
     end
 
+    def body_is_not_enormous
+      errors.add(:base, "That post is too long to store.") if body.body&.to_html.to_s.length > BODY_LIMIT
+    end
+
     def photo_count_is_sane
-      errors.add(:photos, "are limited to #{PHOTO_LIMIT} per post") if photos.attachments.size > PHOTO_LIMIT
+      errors.add(:base, "A post holds up to #{PHOTO_LIMIT} photos.") if photo_count > PHOTO_LIMIT
     end
 
     # The audience is a promise made to the reader at the moment of writing. A

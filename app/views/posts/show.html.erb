@@ -7,11 +7,9 @@
     <h1 class="mt-4 font-serif text-3xl font-semibold leading-tight"><%= @post.title %></h1>
   <% end %>
 
-  <% if @post.body_html.present? %>
-    <div class="prose-kith mt-4"><%= @post.rendered_body %></div>
+  <% if @post.body? %>
+    <div class="mt-4"><%= @post.body %></div>
   <% end %>
-
-  <%= render "posts/photos", post: @post %>
 
   <% if @post.actor_id == current_actor&.id %>
     <div class="mt-8 flex items-center gap-5 border-t border-rule pt-5">

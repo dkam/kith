@@ -1,0 +1,7 @@
+<%# Action Text wraps every rendered body in this. The default is Trix's
+    .trix-content; Kith reads in .prose-kith, and .lexxy-content carries the
+    editor's own structural styles so a post looks the way it did while it was
+    being written. %>
+<div class="prose-kith lexxy-content">
+  <%= yield -%>
+</div>

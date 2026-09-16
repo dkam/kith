@@ -16,19 +16,19 @@ class PostTest < ActiveSupport::TestCase
     assert_in_delta when_, post.published_at, 1.second
   end
 
-  test "the body is rendered to sanitised HTML at write time" do
-    post = actors(:alice).posts.create!(body: "A **bold** claim. <script>alert(1)</script>")
+  test "the body is sanitised on the way to the page" do
+    post = actors(:alice).posts.create!(body: "<p>A <strong>bold</strong> claim.</p><script>alert(1)</script>")
 
-    assert_includes post.body_html, "<strong>bold</strong>"
-    refute_includes post.body_html, "<script"
+    assert_includes post.body.to_s, "<strong>bold</strong>"
+    refute_includes post.body.to_s, "<script"
   end
 
-  test "editing the body re-renders it" do
+  test "editing the body replaces it" do
     post = posts(:alice_followers)
-    post.update!(body: "Something else entirely")
+    post.update!(body: "<p>Something else entirely</p>")
 
-    assert_includes post.body_html, "Something else entirely"
-    refute_includes post.body_html, "coast road"
+    assert_includes post.body.to_s, "Something else entirely"
+    refute_includes post.body.to_s, "coast road"
   end
 
   test "a post must say something" do
@@ -43,10 +43,7 @@ class PostTest < ActiveSupport::TestCase
   end
 
   test "a photo alone is enough" do
-    post = actors(:alice).posts.build
-    post.photos.attach(io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg")
-
-    assert post.valid?
+    assert actors(:alice).posts.build(body: attachment_markup(photo_blob)).valid?
   end
 
   test "the audience is fixed at write time and cannot be changed" do

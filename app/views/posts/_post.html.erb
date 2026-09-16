@@ -8,11 +8,9 @@
     </h2>
   <% end %>
 
-  <% if post.body_html.present? %>
-    <div class="prose-kith mt-3"><%= post.rendered_body %></div>
+  <% if post.body? %>
+    <div class="mt-3"><%= post.body %></div>
   <% end %>
-
-  <%= render "posts/photos", post: post %>
 
   <%= render "comments/summary", post: post %>
 </article>

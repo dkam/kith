@@ -57,12 +57,12 @@ class HappyPathTest < ApplicationSystemTestCase
       click_on "Write"
 
       fill_in "Title", with: "First light"
-      fill_in "Words", with: "The **kettle** is on."
+      compose "The kettle is on."
       choose "People who follow me"
       click_on "Post"
 
       assert_text "First light"
-      assert_selector "strong", text: "kettle"
+      assert_text "The kettle is on."
     end
 
     def zoe_asks_to_follow_alice
@@ -95,7 +95,7 @@ class HappyPathTest < ApplicationSystemTestCase
 
       click_on "Write"
       fill_in "Title", with: "The long road"
-      fill_in "Words", with: "Four hours longer, and worth it."
+      compose "Four hours longer, and worth it."
       click_on "Post"
       assert_text "The long road"
 

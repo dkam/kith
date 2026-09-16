@@ -52,6 +52,35 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     assert_current_path new_session_path, wait: 5
   end
 
+  # The composer is a contenteditable, not a textarea, so there is no field for
+  # fill_in to find. Click into it and type, the way a person does.
+  def compose(text)
+    editor = find("lexxy-editor .lexxy-editor__content")
+    editor.click
+    editor.send_keys(text)
+  end
+
+  # The toolbar's image button appends a hidden file input to the editor and
+  # clicks it — headless Chrome has no file dialog to open, so Capybara drives
+  # that input directly. Lexxy removes the input a second later, hence the find
+  # immediately after the click.
+  def drop_photos(*paths)
+    paths = paths.flatten
+    find("lexxy-toolbar button[name='image']").click
+
+    input = find("lexxy-editor input[type='file']", visible: :all, wait: 5)
+    page.execute_script("arguments[0].style.cssText = 'opacity:1;display:block;width:1px;height:1px'", input)
+    input.set(paths.map(&:to_s))
+
+    # Waiting for an <img> is not enough: Lexxy draws the photo from a local
+    # preview the moment it is chosen, and the signed id that names it in the
+    # post only arrives when the direct upload finishes. Submitting in between
+    # posts the words without the photographs — silently, because the editor
+    # is showing them. The pending URL is the first thing that proves the
+    # upload is done.
+    assert_selector "lexxy-editor img[src^='/media/pending/']", count: paths.size, wait: 15
+  end
+
   private
     # The same signed value ActionDispatch would have set, produced the same
     # way the integration-test helper produces it.

@@ -3,12 +3,10 @@ require "test_helper"
 class MediaControllerTest < ActionDispatch::IntegrationTest
   setup do
     @private_post = posts(:alice_followers)
-    @private_post.photos.attach(io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg")
-    @private_photo = @private_post.photos.first
+    @private_photo = embed_photo(@private_post)
 
     @public_post = posts(:alice_public)
-    @public_post.photos.attach(io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg")
-    @public_photo = @public_post.photos.first
+    @public_photo = embed_photo(@public_post)
   end
 
   test "the author can fetch their own photo" do
@@ -134,6 +132,45 @@ class MediaControllerTest < ActionDispatch::IntegrationTest
 
   test "no blob URL is ever generated for an attachment" do
     assert_match %r{\A/media/}, MediaHelperProbe.new.media_url_for(@private_photo)
+  end
+
+  # --- Photos the editor has uploaded but no post has claimed yet ----------
+
+  test "a member can see a photo they have just uploaded" do
+    sign_in_as members(:alice)
+    get pending_media_url(photo_blob.signed_id, "landscape.jpg")
+
+    assert_response :success
+    assert_equal "image/jpeg", response.media_type
+    assert_equal "private, no-store", response.headers["Cache-Control"]
+  end
+
+  test "a signed-out visitor cannot" do
+    blob = photo_blob
+
+    get pending_media_url(blob.signed_id, "landscape.jpg")
+    assert_redirected_to new_session_url
+  end
+
+  # The whole point of the route. Active Storage's own blob URL would go on
+  # answering forever; this one stops the moment the post's audience becomes
+  # the thing that decides.
+  test "it stops answering once a post has claimed the photo" do
+    sign_in_as members(:alice)
+    signed_id = @private_photo.blob.signed_id
+
+    get pending_media_url(signed_id, "landscape.jpg")
+    assert_response :not_found
+
+    get media_url(signed(@private_photo), :feed)
+    assert_response :success
+  end
+
+  test "a signed id from somewhere else gets 404" do
+    sign_in_as members(:alice)
+
+    get pending_media_url("not-a-signed-id", "landscape.jpg")
+    assert_response :not_found
   end
 
   private

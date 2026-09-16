@@ -109,10 +109,10 @@ class Visibility
 
   # Attachments inherit the visibility of what they hang off. An avatar is
   # visible to any member — names and faces are shown throughout — while a
-  # photo is exactly as private as its post.
+  # photo is exactly as private as the post whose body it is embedded in.
   def attachment?(attachment)
     case attachment&.record
-    when Post then post?(attachment.record)
+    when ActionText::RichText then post?(AttachableMedia.post_for(attachment))
     when Actor then !signed_out?
     else false
     end

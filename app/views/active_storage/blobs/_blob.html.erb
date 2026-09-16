@@ -1,0 +1,26 @@
+<%# An embedded photograph. Overrides Action Text's own partial, which renders
+    an Active Storage blob URL — signed, but not authorised: it says "this is a
+    real file", not "you may look at it". Every photo in Kith goes through
+    MediaController instead, which re-checks the post's audience on each
+    request.
+
+    `blob` is an ActionText::Attachment that delegates to the blob, so
+    .attachable is the blob itself and .node is the markup it came from. %>
+<% attachment = AttachableMedia.attachment_for_blob(blob.attachable) %>
+<%# Lexxy defaults a photo's alt text to its filename, which reads aloud as
+    noise. Describing the picture is the author's to do; until they have, the
+    photo is decorative as far as a screen reader is concerned. %>
+<% alt = blob.node["alt"].to_s %>
+<% alt = "" if alt == blob.filename.to_s %>
+
+<% if attachment && blob.representable? %>
+  <figure class="attachment attachment--preview">
+    <%= link_to media_url_for(attachment, variant: :full), target: "_blank", rel: "noopener" do %>
+      <%= media_image_tag attachment, variant: :feed, alt: alt, loading: "lazy" %>
+    <% end %>
+
+    <% if blob.caption.present? %>
+      <figcaption class="attachment__caption"><%= blob.caption %></figcaption>
+    <% end %>
+  </figure>
+<% end %>

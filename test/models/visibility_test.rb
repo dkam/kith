@@ -222,9 +222,7 @@ class VisibilityTest < ActiveSupport::TestCase
   # --- Media ---------------------------------------------------------------
 
   test "a photo is exactly as private as its post" do
-    post = posts(:alice_followers)
-    post.photos.attach(io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg")
-    attachment = post.photos.first
+    attachment = embed_photo(posts(:alice_followers))
 
     assert as(:alice).attachment?(attachment)
     assert as(:bob).attachment?(attachment)
@@ -233,10 +231,7 @@ class VisibilityTest < ActiveSupport::TestCase
   end
 
   test "a photo on a public post is visible to anyone" do
-    post = posts(:alice_public)
-    post.photos.attach(io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg")
-
-    assert signed_out.attachment?(post.photos.first)
+    assert signed_out.attachment?(embed_photo(posts(:alice_public)))
   end
 
   test "an avatar is visible to any member but not to a signed-out visitor" do

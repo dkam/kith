@@ -44,6 +44,11 @@ Rails.application.routes.draw do
   get "media/:signed_id/:variant", to: "media#show", as: :media, format: false,
     constraints: { signed_id: %r{[^/]+}, variant: /thumb|feed|full/ }
 
+  # A photograph the editor has uploaded but no post has claimed yet. The
+  # template Lexxy fills in wants a filename on the end; nothing reads it.
+  get "media/pending/:signed_id(/:filename)", to: "media#pending", as: :pending_media, format: false,
+    constraints: { signed_id: %r{[^/]+}, filename: %r{[^/]+} }
+
   # Profiles read as handles: /@alice
   get "@:handle", to: "profiles#show", as: :profile, constraints: { handle: /[A-Za-z0-9_]{2,32}/ }
 

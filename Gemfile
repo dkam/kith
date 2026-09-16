@@ -45,8 +45,8 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
 
-# Render post bodies from Markdown [https://github.com/gjtorikian/commonmarker]
-gem "commonmarker", "~> 2.0"
+# Rich text editor for Action Text, built on Lexical [https://lexxy.dev]
+gem "lexxy", "~> 0.9.32"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
