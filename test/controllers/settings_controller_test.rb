@@ -112,4 +112,21 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_session_url
   end
+
+  test "the settings page says which release and revision it is" do
+    original = Rails.application.config.x.revision
+    Rails.application.config.x.revision = "0123456789abcdef0123456789abcdef01234567"
+
+    get settings_url
+
+    assert_select "#about", /#{Regexp.escape(Kith::VERSION)}/
+
+    # A 40-character sha is noise in a paragraph, so only the first twelve are
+    # shown — but the whole one stays one hover away.
+    revision = css_select("#about span[title]").first
+    assert_equal "0123456789ab", revision.text
+    assert_includes revision["title"], "0123456789abcdef0123456789abcdef01234567"
+  ensure
+    Rails.application.config.x.revision = original
+  end
 end

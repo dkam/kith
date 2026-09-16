@@ -74,3 +74,15 @@
     <%= link_to "Change your password", new_password_path, class: "btn-plain" %>
   </div>
 <% end %>
+
+<%# Two different things share the word version, so both are here: the release
+    this is, and the commit it was built from. See config/version.rb. %>
+<div id="about" class="mt-12 border-t border-rule pt-6">
+  <p class="micro">This instance</p>
+  <p class="mt-1.5 font-sans text-sm text-quiet">
+    Kith <%= Kith::VERSION %><span aria-hidden="true"> · </span><span
+      title="Commit this build came from: <%= Rails.application.config.x.revision %>"
+      class="font-mono"><%= short_revision(Rails.application.config.x.revision) %></span>
+  </p>
+</div>
+

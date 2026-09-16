@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+#
+# Build and push the kith production image — and, for a real release, create
+# the matching git tag.
+#
+# Bumping Kith::VERSION in config/version.rb is what cuts a release; this script
+# is what carries it out. The git tag is created here, in the same run as the
+# push, rather than being a separate step a human is trusted to remember —
+# because they don't. splat's config/version.rb once read 1.14.0 while its
+# newest git tag was v1.7.8: eight releases with no commit you could check out,
+# for exactly that reason.
+#
+# A pre-release (any version containing a hyphen, e.g. 0.2.0-dev) publishes
+# :v0.2.0-dev, does not move :latest, and creates no git tag.
+#
+# amd64 only by default — that is what kith is deployed to, and an arm64 image
+# costs a full second build for something nothing pulls. Set PLATFORMS to
+# build others; off a native host they go through QEMU, and the two slowest
+# steps are the two that suffer most (bundle install compiles native gem
+# extensions, assets:precompile boots Rails).
+#
+# Environment:
+#   REGISTRY=host/repo           image repo             (default: git.booko.info/dkam/kith)
+#   PLATFORMS=linux/amd64,...    what to build          (default: linux/amd64)
+#   BUILDER=name                 buildx builder to use  (default: kith-local)
+#   BUILD_HOST=ssh://user@host   build there, not here  (default: unset)
+#   CACHE_REF=host/repo:tag      layer cache location   (default: $REGISTRY:buildcache)
+#   ALLOW_DIRTY=1                build a dirty tree anyway
+#   SKIP_TAG=1                   build and push, but create no git tag
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+REGISTRY="${REGISTRY:-git.booko.info/dkam/kith}"
+PLATFORMS="${PLATFORMS:-linux/amd64}"
+CACHE_REF="${CACHE_REF:-$REGISTRY:buildcache}"
+
+# The image carries a commit sha as a tag, so the tree had better be that
+# commit. Untracked files are ignored: .dockerignore keeps them out of the
+# context, and there are always a few lying about.
+if [[ -n "$(git status --porcelain --untracked-files=no)" && "${ALLOW_DIRTY:-}" != "1" ]]; then
+  echo "build: working tree is dirty — the sha tag would name a commit this image isn't." >&2
+  echo "build: commit first, or re-run with ALLOW_DIRTY=1." >&2
+  exit 1
+fi
+
+# A missing registry login doesn't announce itself until the --push at the very
+# end, so it costs a whole build to discover. Docker writes an `auths` entry for
+# the host on login even when the secret itself lives in a credential helper, so
+# the presence of that key is the test, not its contents.
+registry_host="${REGISTRY%%/*}"
+if ! ruby -rjson -e '
+  cfg, host = ARGV
+  exit 1 unless File.exist?(cfg)
+  exit((JSON.parse(File.read(cfg))["auths"] || {}).key?(host) ? 0 : 1)
+' "${DOCKER_CONFIG:-$HOME/.docker}/config.json" "$registry_host" 2>/dev/null; then
+  echo "build: not logged in to $registry_host — the push at the end would 401." >&2
+  echo "build: docker login $registry_host" >&2
+  echo "build: the password is a Gitea access token with read+write 'package'" >&2
+  echo "build: scope, not your account password." >&2
+  exit 1
+fi
+
+sha="$(git rev-parse HEAD)"
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+# Read without booting Rails — that is why config/version.rb lives in config/
+# and holds nothing but the constant.
+version="$(ruby -e "require './config/version'; puts Kith::VERSION")"
+tag="v$version"
+
+# A pre-release earns an image but not a permanent mark in the history, so it
+# neither moves :latest nor gets a git tag. Releases are cut from main only: a
+# tag pointing at a commit that never landed there is worse than no tag.
+if [[ "$version" == *-* ]]; then
+  release=0
+  echo "build: $version is a pre-release — not moving :latest, not tagging."
+elif [[ "$branch" != "main" ]]; then
+  release=0
+  echo "build: on '$branch', not main — publishing $tag but not moving :latest or tagging."
+else
+  release=1
+fi
+
+if [[ "$release" == "1" ]]; then
+  tag_args=(-t "$REGISTRY:latest")
+else
+  tag_args=()
+fi
+
+# Idempotent: created on first run, reused after. docker-container even for a
+# local build — the default 'docker' driver cannot export a registry cache, and
+# --cache-to below would fail the build outright rather than degrade to an
+# uncached one.
+BUILDER="${BUILDER:-kith-local}"
+if [[ -n "${BUILD_HOST:-}" ]]; then
+  endpoint=("$BUILD_HOST")
+  where="$BUILD_HOST"
+else
+  endpoint=()
+  where="here"
+fi
+
+if ! docker buildx inspect "$BUILDER" >/dev/null 2>&1; then
+  echo "build: creating buildx builder '$BUILDER' ($where)"
+  docker buildx create --name "$BUILDER" --driver docker-container \
+    --platform "$PLATFORMS" "${endpoint[@]}" >/dev/null
+fi
+
+echo "build: $REGISTRY:$tag ($sha, $PLATFORMS, builder=$BUILDER, building on $where)"
+
+# ignore-error on cache-to so a registry that won't take a cache manifest costs
+# us the cache, not the build.
+#
+# GIT_SHA is read at boot by config/initializers/revision.rb, so the running
+# container can say which commit it is — the question the version number
+# deliberately does not answer.
+docker buildx build \
+  --builder "$BUILDER" \
+  --platform "$PLATFORMS" \
+  --build-arg "GIT_SHA=$sha" \
+  --cache-from "type=registry,ref=$CACHE_REF" \
+  --cache-to "type=registry,ref=$CACHE_REF,mode=max,image-manifest=true,ignore-error=true" \
+  --provenance=false \
+  "${tag_args[@]}" \
+  -t "$REGISTRY:$tag" \
+  -t "$REGISTRY:$sha" \
+  --push \
+  .
+
+# Tag the commit the image was built from, so `git checkout vX.Y.Z` gets you
+# exactly what is running. Only after a successful push: a tag for an image that
+# does not exist is a lie. Idempotent, so re-running on an unchanged version is
+# a no-op rather than a failure.
+if [[ "$release" == "1" && "${SKIP_TAG:-}" != "1" ]]; then
+  if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+    echo "build: $tag already tagged locally — nothing to do."
+  elif git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+    echo "build: $tag already tagged on origin — nothing to do."
+  else
+    git tag -a "$tag" -m "kith $tag"
+    git push origin "$tag"
+    echo "build: tagged $tag"
+  fi
+fi

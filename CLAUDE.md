@@ -228,7 +228,33 @@ bin/rubocop            # rails-omakase
 bin/brakeman           # security scan
 bin/rails kith:first_member[email,handle,name]
 bin/rails kith:setup_code   # reprint the setup code, while nobody has joined
+bin/build              # build + push the image, and tag the release
 ```
+
+### Releases
+
+Two different things share the word *version*, and both have a name:
+
+- **version** — which release this is. Hand-set SemVer in `config/version.rb`,
+  survives a rebuild of identical code, goes in `CHANGELOG.md`, gets said out
+  loud.
+- **revision** — which commit the running container was built from. The
+  Dockerfile writes it into a `VERSION` file from `ARG GIT_SHA`;
+  `config/initializers/revision.rb` reads it at boot into
+  `config.x.revision`, falling back to `git rev-parse` in **development only**
+  — a deployed container has no business shelling out on boot. Both are shown
+  at the foot of the settings page.
+
+**Bumping `Kith::VERSION` on `main` is the release.** Everything else follows
+from it: `bin/build` reads the constant without booting Rails, pushes
+`:vX.Y.Z`, `:<sha>` and `:latest`, and then creates the git tag in the same run
+— *after* a successful push, because a tag for an image that does not exist is
+a lie. A pre-release (any version containing a hyphen, e.g. `0.2.0-dev`)
+publishes its own image tag, does not move `:latest`, and earns no git tag.
+
+Tagging is not a separate step a human is trusted to remember, because they
+don't: splat's `config/version.rb` once read 1.14.0 while its newest git tag
+was v1.7.8 — eight releases with no commit you could check out.
 
 ---
 

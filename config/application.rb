@@ -6,6 +6,10 @@ require "rails/all"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+# Define Kith::VERSION before the Application class and all initializers, so
+# anything that loads at boot can name the release it is part of.
+require_relative "version"
+
 module Kith
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
