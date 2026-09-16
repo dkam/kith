@@ -17,7 +17,7 @@ class RegistrationsController < ApplicationController
 
     if @member.persisted?
       start_new_session_for @member
-      redirect_to root_path, notice: "Welcome to Kith. This is your corner of it."
+      redirect_to settings_path, notice: "Welcome to Kith. This is your corner of it."
     else
       render :new, status: :unprocessable_content
     end

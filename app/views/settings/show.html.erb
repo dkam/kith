@@ -1,0 +1,59 @@
+<% content_for :title, "You" %>
+
+<h1 class="font-serif text-2xl font-semibold">You</h1>
+<p class="mt-2 text-sm text-quiet">
+  You are <span class="font-medium text-ink">@<%= @actor.handle %></span>.
+  Handles don't change — other people's links to you depend on it.
+</p>
+
+<%# scope: the record is a LocalActor, but the form speaks of actors. %>
+<%= form_with model: @actor, scope: :actor, url: settings_path, method: :patch, class: "mt-8 space-y-8" do |form| %>
+  <% if @actor.errors.any? %>
+    <div class="rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
+      <ul class="list-disc space-y-1 pl-4">
+        <% @actor.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :display_name, "Name", class: "label" %>
+    <%= form.text_field :display_name, autocomplete: "name", class: "field" %>
+    <p class="hint">What your friends call you.</p>
+  </div>
+
+  <div>
+    <span class="label">Photo</span>
+    <div class="flex items-center gap-4">
+      <%= avatar_tag @actor, css_class: "size-16 rounded-full object-cover bg-rule" %>
+      <%= form.file_field :avatar, accept: "image/jpeg,image/png,image/webp", direct_upload: true, class: "text-sm text-quiet file:mr-3 file:rounded-md file:border file:border-rule file:bg-white file:px-3 file:py-1.5 file:text-sm file:text-ink" %>
+    </div>
+    <p class="hint">Location and camera data are removed from anything you upload.</p>
+  </div>
+
+  <fieldset>
+    <legend class="label">Who can find you</legend>
+    <div class="space-y-3">
+      <% {
+        everyone: [ "Everyone here", "Anyone signed in can open your profile from your name." ],
+        connections_only: [ "People I'm connected with", "Your name still shows on your comments, but only connections can click through." ],
+        invisible: [ "Nobody", "Your profile and your comments are for your connections only." ]
+      }.each do |value, (label, description)| %>
+        <label class="flex items-baseline gap-3">
+          <%= form.radio_button :discoverable, value, class: "mt-1 accent-[var(--color-accent)]" %>
+          <span>
+            <span class="text-sm font-medium"><%= label %></span>
+            <span class="block text-sm text-quiet"><%= description %></span>
+          </span>
+        </label>
+      <% end %>
+    </div>
+  </fieldset>
+
+  <div class="flex items-center gap-5 border-t border-rule pt-6">
+    <%= form.submit "Save", class: "btn" %>
+    <%= link_to "Change your password", new_password_path, class: "btn-plain" %>
+  </div>
+<% end %>

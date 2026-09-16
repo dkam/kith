@@ -30,7 +30,9 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
       post join_url(invites(:open).code), params: registration_params
     end
 
-    assert_redirected_to root_url
+    # A new member lands on their settings, not an empty feed: the first thing
+    # to do here is say who you are.
+    assert_redirected_to settings_url
 
     member = Member.find_by(email_address: "zoe@example.com")
     assert_equal members(:alice), member.inviter_member
