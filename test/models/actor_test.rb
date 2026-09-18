@@ -51,9 +51,10 @@ class ActorTest < ActiveSupport::TestCase
     assert_equal "@zoe", LocalActor.new(handle: "zoe").to_s
   end
 
-  test "discoverable is one of three states and defaults to connections_only" do
+  test "discoverable is a ladder of four rungs and defaults to connections_only" do
     assert_equal "connections_only", LocalActor.new(handle: "zoe").discoverable
-    assert_equal %w[ members connections_only invisible ], Actor.discoverables.keys
+    assert_equal %w[ internet members connections_only invisible ], Actor.discoverables.keys
+    assert_equal "anyone on the web", LocalActor.new(handle: "zoe", discoverable: :internet).discoverability
 
     refute LocalActor.new(handle: "zoe", discoverable: "nobody").valid?
   end

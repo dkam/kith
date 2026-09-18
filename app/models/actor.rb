@@ -7,7 +7,20 @@
 class Actor < ApplicationRecord
   HANDLE_FORMAT = /\A[a-z0-9_]{2,32}\z/
 
-  enum :discoverable, { members: 0, connections_only: 1, invisible: 2 }, validate: true
+  # How far out this actor reaches, widest first. One ladder, not two settings:
+  # "who can find me" and "who can read my profile page" are the same question
+  # asked at different distances, and a second column would mean two rules to
+  # keep in step. The integers are historical; read the order, not the numbers.
+  enum :discoverable, { internet: 3, members: 0, connections_only: 1, invisible: 2 }, validate: true
+
+  # How the rung reads in a sentence. `humanize` turns `internet` into
+  # "Internet", which is not a thing anyone is discoverable *by*.
+  DISCOVERABILITY = {
+    "internet" => "anyone on the web",
+    "members" => "members of this instance",
+    "connections_only" => "your connections",
+    "invisible" => "nobody"
+  }.freeze
 
   has_one :member, dependent: :destroy
 
@@ -29,6 +42,8 @@ class Actor < ApplicationRecord
   validates :display_name, length: { maximum: 80 }
 
   scope :local, -> { where(domain: nil) }
+
+  def discoverability = DISCOVERABILITY.fetch(discoverable)
 
   def local? = domain.nil?
   def remote? = !local?

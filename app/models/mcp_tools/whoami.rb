@@ -14,7 +14,7 @@ module McpTools
 
       text <<~REPORT
         @#{actor.handle} — #{actor.display_name}
-        Discoverable by: #{actor.discoverable.humanize.downcase}
+        Discoverable by: #{actor.discoverability}
         Following: #{actor.followees.count} · Followers: #{actor.followers.count}
         Unread in your feed: #{unread_count(member, server_context.visibility)}
         This endpoint: #{server_context.name} — #{server_context.access_label}
