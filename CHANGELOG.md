@@ -1,9 +1,13 @@
 # Changelog
 
-Kith is not released and carries no version number, so entries here are by the
-day the work landed, newest first, and each says why as well as what. The one
-versioned thing in the repo is the MCP server: its number is
-`McpServer::VERSION`, and it moves when its tools do.
+Kith's release version is `Kith::VERSION`, in `config/version.rb`, and changing
+it is what cuts a release. Nothing has been released yet, so entries here are by
+the day the work landed, newest first, and each says why as well as what. Once
+there are releases to hang them on, these group under version headings instead.
+
+The MCP server carries its own number, `McpServer::VERSION`, because it is a
+published interface with clients on the other end of it. It moves when its tools
+do, independently of the release version.
 
 ## 2026-09-18
 
