@@ -143,10 +143,10 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a post that is only photographs still says something" do
-    post = posts(:alice_followers)
-    post.update!(title: nil, body: "")
+    post = actors(:alice).posts.create!(title: "For now", audience: :followers)
     embed_photo(post, filename: "landscape.jpg")
     embed_photo(post, filename: "portrait.jpg")
+    post.update!(title: nil)
 
     text = invoke("post", id: post.id)
 
