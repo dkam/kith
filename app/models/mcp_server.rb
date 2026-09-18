@@ -7,7 +7,7 @@
 class McpServer
   NAME = "kith"
   # The MCP server's own version, not the app's. It moves when the tools do.
-  VERSION = "1.1.0"
+  VERSION = "1.1.1"
 
   READING = [ McpTools::Whoami, McpTools::Feed, McpTools::ReadPost, McpTools::Notifications ].freeze
   WRITING = [ McpTools::WritePost, McpTools::WriteComment, McpTools::MarkRead ].freeze
