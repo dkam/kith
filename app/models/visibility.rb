@@ -49,19 +49,28 @@ class Visibility
   # (mutual accepted follows), or if they have chosen to be discoverable by
   # every member. `connections_only` and `invisible` differ elsewhere; for the
   # link itself they are the same answer.
+  #
+  # A signed-out visitor is a stranger with less: they get a link only to
+  # someone who has opted all the way out onto the web. That is why the name
+  # on a public post is plain text unless its author asked for otherwise.
   def profile_link?(actor)
-    return false if actor.nil? || signed_out?
+    return false if actor.nil?
+    return actor.internet? if signed_out?
     return true if actor.id == viewer.id
-    return true if actor.members?
+    return true if actor.members? || actor.internet?
 
     viewer.connected_to?(actor)
   end
 
   # Whether the viewer may open the profile page at all, as opposed to merely
   # seeing a link to it. An invisible member's profile is for their connections
-  # only.
+  # only; an `internet` member's is for anyone at all, account or no account.
+  #
+  # Never the other way round: there is no rung where a name is a link to a
+  # page the same viewer would be 404ed from. The cross-check test asserts it.
   def profile?(actor)
-    return false if actor.nil? || signed_out?
+    return false if actor.nil?
+    return actor.internet? if signed_out?
     return true if actor.id == viewer.id
     return true unless actor.invisible?
 

@@ -21,3 +21,9 @@ dave:
   handle: dave
   display_name: Dave Okonkwo
   discoverable: connections_only
+
+erin:
+  type: LocalActor
+  handle: erin
+  display_name: Erin Vasquez
+  discoverable: internet
