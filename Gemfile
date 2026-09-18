@@ -48,6 +48,10 @@ gem "image_processing", "~> 1.2"
 # Rich text editor for Action Text, built on Lexical [https://lexxy.dev]
 gem "lexxy", "~> 0.9.32"
 
+# The official Ruby MCP SDK, for the per-member endpoint an agent connects to
+# [https://github.com/modelcontextprotocol/ruby-sdk]
+gem "mcp", "~> 1.5"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"

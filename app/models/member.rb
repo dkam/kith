@@ -11,6 +11,7 @@ class Member < ApplicationRecord
   has_many :issued_invites, class_name: "Invite", foreign_key: :inviter_member_id, dependent: :destroy
   has_one :claimed_invite, class_name: "Invite", foreign_key: :claimed_by_member_id, dependent: :nullify
   has_many :feed_items, dependent: :delete_all
+  has_one :mcp_token, dependent: :destroy
   has_many :notifications, dependent: :delete_all
   has_many :invited_members, class_name: "Member", foreign_key: :inviter_member_id, dependent: :nullify
 
@@ -22,6 +23,12 @@ class Member < ApplicationRecord
   validates :password, length: { minimum: 8 }, allow_nil: true
 
   delegate :handle, :display_name, :discoverable, to: :actor
+
+  # The member's MCP endpoint, made the first time they go looking for it.
+  # Nobody is issued a credential they never asked to see.
+  def mcp_token!
+    mcp_token || create_mcp_token!
+  end
 
   # The only way a member is created outside the first-member rake task: by
   # claiming an invite. The member, its actor and the spending of the invite

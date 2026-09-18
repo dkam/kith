@@ -57,3 +57,37 @@
     <%= link_to "Change your password", new_password_path, class: "btn-plain" %>
   </div>
 <% end %>
+
+<%# The endpoint an assistant connects to. It reads; it cannot write, and it
+    cannot see anything its member couldn't — every tool behind it goes through
+    Visibility, the same as the feed. %>
+<section class="mt-12 border-t border-rule pt-8" data-controller="clipboard"
+         data-clipboard-label-value="Copy" data-clipboard-copied-label-value="Copied">
+  <h2 class="font-serif text-xl font-semibold">Your endpoint for assistants</h2>
+  <p class="mt-2 max-w-prose text-sm text-quiet">
+    Paste this into an assistant that speaks MCP and it can read your feed, open
+    a post you can see, and list your notifications. It can't write anything,
+    and it can't see anything you can't. Anyone holding this link can read as
+    you, so keep it the way you'd keep a password — and reset it if it gets out.
+  </p>
+
+  <div class="mt-6">
+    <%= label_tag :mcp_endpoint, "Endpoint", class: "label" %>
+    <%= text_field_tag :mcp_endpoint, mcp_url(token: @mcp_token.token), readonly: true,
+          class: "field font-mono text-xs", data: { clipboard_target: "source" },
+          onfocus: "this.select()" %>
+  </div>
+
+  <div class="mt-4 flex flex-wrap items-center gap-5">
+    <button type="button" class="btn-quiet btn-sm" data-clipboard-target="button"
+            data-action="clipboard#copy">Copy</button>
+    <%= button_to "Reset", settings_mcp_token_path, method: :patch, class: "btn-plain" %>
+    <p class="font-sans text-sm text-meta">
+      <% if @mcp_token.last_used_at %>
+        Last used <%= time_ago_in_words @mcp_token.last_used_at %> ago
+      <% else %>
+        Not used yet
+      <% end %>
+    </p>
+  </div>
+</section>

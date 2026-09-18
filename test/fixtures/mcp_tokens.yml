@@ -1,0 +1,8 @@
+alice:
+  member: alice
+  token: alicesmcptokenvalue00001
+  name: Alice's laptop
+
+bob:
+  member: bob
+  token: bobsmcptokenvalue00000002

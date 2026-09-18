@@ -15,7 +15,11 @@ Rails.application.routes.draw do
 
   resources :invites, only: %i[ index create destroy ]
 
-  resource :settings, only: %i[ show update ], controller: "settings"
+  resource :settings, only: %i[ show update ], controller: "settings" do
+    # Resetting the MCP endpoint. The old token stops working the moment this
+    # returns, which is the point of the button.
+    resource :mcp_token, only: :update
+  end
 
   resources :posts, except: :index do
     resources :comments, only: :create
@@ -51,6 +55,14 @@ Rails.application.routes.draw do
 
   # Profiles read as handles: /@alice
   get "@:handle", to: "profiles#show", as: :profile, constraints: { handle: /[A-Za-z0-9_]{2,32}/ }
+
+  # One member's agent endpoint. The token rides in the query string because
+  # that is the only place every MCP client can carry it — `?token=` is also
+  # what Rails already filters out of the logs — with an Authorization: Bearer
+  # header accepted for clients that can send one. GET is the stream a
+  # streamable-HTTP client may ask for; Kith has nothing to say unprompted.
+  post "mcp", to: "mcp#create", as: :mcp
+  get  "mcp", to: "mcp#show"
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check

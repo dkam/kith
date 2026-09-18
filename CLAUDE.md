@@ -34,6 +34,8 @@ Beyond the Rails defaults, only:
 - `image_processing` — Active Storage variants, EXIF stripping.
 - `lexxy` — the Action Text editor (approved 2026-09-16, replacing
   `commonmarker` and Markdown storage).
+- `mcp` — the official Ruby MCP SDK, behind each member's read-only agent
+  endpoint (approved 2026-09-18).
 - `json` pinned to `~> 2.7` — Ruby 4.0 ships json 3.x as a default gem, and its
   `JSON.parse` arity change breaks `ActiveSupport::JSON.decode`, which every
   signed cookie goes through. Remove the pin when Rails supports json 3.
@@ -104,6 +106,11 @@ Integer primary keys. Don't reach for UUIDs.
   reader's unread state.
 - **`notifications`** — `member_id`, `actor_id`, `subject` (polymorphic),
   `kind`, `read_at`.
+- **`mcp_tokens`** — `member_id`, `token`, `name`, `access` enum, `last_used_at`.
+  The credential behind a member's MCP endpoint. One row per member today; the
+  table is shaped for several, because "Claude on my phone" and "the laptop"
+  will want telling apart, and because a token that may one day write is
+  another `access` value rather than another table.
 
 ### Deviations from the original brief, and why
 
@@ -249,6 +256,8 @@ bin/rails kith:setup_code   # reprint the setup code, while nobody has joined
 6. Flat comments with the gated profile-link rule.
 7. Notifications: new follower, follow accepted, new comment on your post.
 8. `MediaController` as specified.
+9. A per-member MCP endpoint, read-only, reachable from settings with a copy
+   and a reset button. Added 2026-09-18, after the original eight.
 
 **Not in phase 1**: federation, ActivityPub, RSS ingest, circles, likes,
 passkeys, search, DMs.
@@ -284,6 +293,12 @@ passkeys, search, DMs.
   editor is showing them. `drop_photos` in the system tests waits for the
   `/media/pending/` URL, which is the first thing that proves the upload is
   done.
+- **The MCP token is in the query string on purpose.** It is the only place a
+  credential can ride that every MCP client accepts — the phone apps take a URL
+  and nothing else — and `token` is already in `config.filter_parameters`, so
+  the request line and the parameters come out `[FILTERED]`. What filtering
+  does *not* cover is the SQL echo in development, which is why
+  `McpController#authenticate_token` silences the logger around the lookup.
 - **Lexxy's stylesheet is unlayered, and unlayered CSS beats every cascade
   layer** however specific the layered selector is. Overrides for it therefore
   sit outside `@layer components` in `app/assets/tailwind/application.css`;

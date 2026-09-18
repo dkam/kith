@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_000000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -116,6 +116,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_090000) do
     t.index ["inviter_member_id"], name: "index_invites_on_inviter_member_id"
   end
 
+  create_table "mcp_tokens", force: :cascade do |t|
+    t.integer "access", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "last_used_at"
+    t.integer "member_id", null: false
+    t.string "name"
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["member_id"], name: "index_mcp_tokens_on_member_id"
+    t.index ["token"], name: "index_mcp_tokens_on_token", unique: true
+  end
+
   create_table "members", force: :cascade do |t|
     t.integer "actor_id", null: false
     t.datetime "created_at", null: false
@@ -179,6 +191,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_090000) do
   add_foreign_key "follows", "actors", column: "follower_actor_id"
   add_foreign_key "invites", "members", column: "claimed_by_member_id"
   add_foreign_key "invites", "members", column: "inviter_member_id"
+  add_foreign_key "mcp_tokens", "members"
   add_foreign_key "members", "actors"
   add_foreign_key "members", "members", column: "inviter_member_id"
   add_foreign_key "notifications", "actors"
