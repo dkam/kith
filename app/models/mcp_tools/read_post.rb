@@ -31,8 +31,26 @@ module McpTools
       ].compact.join("\n")
     end
 
+    # to_plain_text renders an embedded photograph as "[IMG_1137.jpeg]", which
+    # is a camera's filename rather than a sentence — the same thing
+    # Post#excerpt refuses to say. Take the photographs out of the prose and
+    # then name them in words, in the place they were.
     def self.body_of(post)
-      post.body.to_plain_text.strip
+      return nil if post.body.body.nil?
+
+      prose = post.body.body.fragment
+        .update { |source| source.css(ActionText::Attachment.tag_name).each(&:remove) }
+        .to_plain_text.strip
+
+      [ prose.presence, photo_note(post) ].compact.join("\n\n")
+    end
+
+    def self.photo_note(post)
+      case post.photo_count
+      when 0 then nil
+      when 1 then "(One photograph.)"
+      else "(#{post.photo_count} photographs.)"
+      end
     end
 
     def self.comments_on(post, visibility)
@@ -44,6 +62,6 @@ module McpTools
         .join("\n")
     end
 
-    private_class_method :heading, :body_of, :comments_on
+    private_class_method :heading, :body_of, :photo_note, :comments_on
   end
 end

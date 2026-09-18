@@ -1,0 +1,29 @@
+<%# A profile as the open web sees it: only for an actor on the `internet`
+    rung, and only ever avatar, name, handle and public posts. No follow
+    button, no follower count, no "follows you" — the follow graph was
+    promised private, and this page is the one place it would be easy to
+    forget that. %>
+<% content_for :title, @actor.to_s %>
+
+<header class="flex items-start gap-4 border-b border-rule pb-8">
+  <%= avatar_tag @actor, css_class: "avatar size-16 shrink-0" %>
+
+  <div class="min-w-0 flex-1">
+    <h1 class="font-serif text-2xl font-semibold"><%= @actor.to_s %></h1>
+    <p class="text-sm text-quiet">@<%= @actor.full_handle %></p>
+  </div>
+</header>
+
+<% if @posts.any? %>
+  <div class="divide-y divide-rule">
+    <% @posts.each do |post| %>
+      <%= render "posts/post", post: post %>
+    <% end %>
+  </div>
+<% else %>
+  <p class="py-10 text-sm text-quiet">Nothing public here yet.</p>
+<% end %>
+
+<p class="micro border-t border-rule pt-6 text-quiet">
+  Public posts on a Kith instance. Everything else here is private.
+</p>

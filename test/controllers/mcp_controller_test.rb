@@ -130,6 +130,30 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_includes text, "The coast road, then."
   end
 
+  test "a photograph is named in words, never by the filename off someone's camera" do
+    post = posts(:alice_followers)
+    post.update!(body: "<div>Out on the water.</div>")
+    embed_photo(post, filename: "landscape.jpg")
+
+    text = invoke("post", id: post.id)
+
+    assert_includes text, "Out on the water."
+    assert_includes text, "One photograph."
+    assert_not_includes text, "landscape.jpg"
+  end
+
+  test "a post that is only photographs still says something" do
+    post = posts(:alice_followers)
+    post.update!(title: nil, body: "")
+    embed_photo(post, filename: "landscape.jpg")
+    embed_photo(post, filename: "portrait.jpg")
+
+    text = invoke("post", id: post.id)
+
+    assert_includes text, "2 photographs."
+    assert_not_includes text, ".jpg"
+  end
+
   test "a post you may not see answers exactly as one that was never written" do
     hidden = invoke("post", id: posts(:dave_followers).id, expect_error: true)
     absent = invoke("post", id: 0, expect_error: true)
