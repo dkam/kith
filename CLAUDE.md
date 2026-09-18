@@ -70,14 +70,31 @@ These are design decisions, not suggestions.
   servers.
 - **Comments are flat.** No threading. Visible to the post's audience. A
   commenter's name is always shown; their profile link is rendered only if the
-  viewer is connected to them **or** they are `discoverable: everyone`.
+  viewer is connected to them **or** they are discoverable by `members` or
+  `internet`.
 - **Notifications pass the identical visibility check as the feed.** They are
   the classic side channel for leaks — route them through `Visibility` like
   everything else.
 - **Nothing is soft-deleted.** Deleting a post deletes its media.
-- **Member discoverability** is three-state: `everyone` / `connections_only` /
-  `invisible`. An invisible member's comments are shown only to their
-  connections.
+- **Member discoverability is one ladder of four rungs**, widest first:
+  `internet` / `members` / `connections_only` / `invisible`, defaulting to
+  `connections_only`. An invisible member's comments are shown only to their
+  connections. There is deliberately **no second "profile visibility"
+  setting**: who can find me and who can read my profile page are the same
+  question asked at different distances, and two columns would mean two rules
+  to keep in step with a truth table full of holes between them.
+- **`internet` is the only rung the open web can see.** A signed-out visitor
+  gets a profile page for an `internet` actor and a 404 for every other one —
+  the same 404 a handle nobody has ever used returns. That page is a separate
+  template (`profiles/anonymous`), not conditionals inside the members' one:
+  avatar, name, handle, public posts, and nothing of the follow graph.
+- **Readable and findable are different grants.** A public post's permalink is
+  anonymously readable whatever its author's rung; it is *indexed* only when
+  the author is on `internet`. The layout is `noindex, nofollow` everywhere
+  else — see `ApplicationController#allow_indexing_by`, which both public
+  surfaces ask, and which requires a signed-out viewer as well as the rung.
+- **Opting onto the web is a one-way door**, so it is never the default. Once
+  crawled, unpublishing is theatre.
 
 ---
 
@@ -116,10 +133,16 @@ Integer primary keys. Don't reach for UUIDs.
 
 ### Deviations from the original brief, and why
 
-- `actors.discoverable` holds the three-state enum. The brief listed the column
-  on `actors` but described its values under "Member"; actors is the right home
-  because remote actors need discoverability too, and a member's identity *is*
-  its actor.
+- `actors.discoverable` holds the enum. The brief listed the column on `actors`
+  but described its values under "Member"; actors is the right home because
+  remote actors need discoverability too, and a member's identity *is* its
+  actor.
+- `everyone` was renamed `members`, and `internet` added above it. The value
+  had always meant "every member of this instance and nobody beyond it", which
+  reads correctly only while there is nothing beyond the instance. With a rung
+  above it, "everyone" is a word that means "not everyone" — and it is the rung
+  people misread in the direction that hurts. The integer is still 0; the
+  rename was code only.
 - `notifications.kind` was added. `new_follower` and `follow_accepted` both
   point at a `Follow` subject and are otherwise indistinguishable.
 - `posts.body`/`body_html` are gone. The brief assumed Markdown in, HTML out;
@@ -178,14 +201,26 @@ Integer primary keys. Don't reach for UUIDs.
 A single policy object, `Visibility`, answers:
 
 - can actor X see post P?
-- can actor X see actor Y's profile link?
+- can actor X see actor Y's profile link, or open their profile page?
 - can actor X see comment C?
+
+X may be **nil**. A signed-out visitor is not an error case to bounce at the
+door; it is a viewer with less, and `Visibility` answers for it like any other.
+`post?` says yes to a public post, `profile?` and `profile_link?` say yes only
+on the `internet` rung, everything else is no. Media, notifications and the MCP
+endpoint inherit that for free, because they were already routed through here.
 
 It answers in two shapes — a predicate for one record (`post?`, `comment?`) and
 a scope for many (`visible_posts`, `visible_comments`). The tests assert the two
 can never diverge, by cross-checking every actor against every post and comment
 in the fixture graph. That pair drifting apart is how a feed and a permalink
 come to hold different opinions about the same post.
+
+The same cross-check binds `profile_link?` to `profile?`: **nobody is ever
+shown a link to a page they would be 404ed from.** A link that leads to a 404
+is itself the disclosure — the link says the thing exists and the page denies
+it — and the two methods are edited separately, which is exactly how they
+drift.
 
 **Every** feed, comment, notification, media and permalink query goes through
 it. There is no second path. Cover it thoroughly with tests — this is the
@@ -198,6 +233,16 @@ Two habits that fall out of it:
   "does not exist" return the *same* status.
 - **Counts are disclosures too.** A reply count, an unread badge: derive them
   from the visible set, not from the table.
+- **`Cache-Control: public` only where there is no session.** The same URL
+  renders a different body to a member — a follow button, their followers-only
+  posts — and a shared cache knows nothing about anybody's session. Set it on
+  the signed-out branch, never on a page rendered under a session.
+
+A seam left for later: when federation lands, the ActivityPub actor document is
+content-negotiated at the profile's own URL and must resolve for **every** local
+actor, whatever their rung. That is a machine document, not a profile page;
+`discoverable` must not gate it, or remote follow requests cannot address an
+invisible member. Don't build it now.
 
 ---
 
@@ -225,6 +270,29 @@ Two habits that fall out of it:
   don't need.
 - CI runs tests, system tests, brakeman, and rubocop-rails-omakase. Keep it
   green.
+
+### Releasing
+
+**Bumping `Kith::VERSION` in `config/version.rb` is the release.** Pushing that
+change to main is the only trigger `.github/workflows/build.yml` has: it builds
+amd64 and arm64 natively, stitches them into one manifest on
+`ghcr.io/dkam/kith`, tags it `:vX.Y.Z` and `:X.Y.Z`, and — for a non-pre-release
+— moves `:latest`, tags the commit `vX.Y.Z` and cuts a GitHub Release. A version
+with a hyphen (`0.2.0-dev`) publishes its own image tags and nothing else: no
+`:latest`, no git tag. There is no manual tagging step, because manual steps
+stop happening and the git tags fall behind the image tags.
+
+Two different questions, two different answers, don't conflate them:
+
+- `Kith::VERSION` — *which release is this?* Hand-written, survives a rebuild,
+  and names the image tag.
+- `config.x.revision` — *which commit is this?* The Dockerfile writes the build's
+  `GIT_SHA` to a `VERSION` file and `config/initializers/revision.rb` reads it at
+  boot, falling back to `git rev-parse` in development. It is the only thing that
+  answers "is what I just built actually running?"
+
+`McpServer::VERSION` is a third thing again — the protocol surface's own
+version, which moves when the tools do.
 
 ### Commands
 
