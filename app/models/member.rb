@@ -89,7 +89,7 @@ class Member < ApplicationRecord
   # operator, twice.
   def self.create_first(handle:, display_name:, email_address:, password:, password_confirmation:)
     member = new(email_address:, password:, password_confirmation:)
-    member.build_actor(type: "LocalActor", handle: handle, display_name: display_name.presence || handle, discoverable: :everyone)
+    member.build_actor(type: "LocalActor", handle: handle, display_name: display_name.presence || handle, discoverable: :members)
 
     if exists?
       member.errors.add(:base, "Kith already has a member. Ask them for an invite.")

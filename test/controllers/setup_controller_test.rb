@@ -55,7 +55,7 @@ class SetupControllerTest < ActionDispatch::IntegrationTest
     assert_nil member.inviter_member, "the first member has nobody above them"
     assert_equal "dan", member.handle
     assert_equal "Dan", member.display_name
-    assert member.actor.everyone?, "the only member has nobody to hide from yet"
+    assert member.actor.members?, "the only member has nobody to hide from yet"
 
     # Signed in, and not asked to do it again.
     get root_url

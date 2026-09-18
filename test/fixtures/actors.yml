@@ -8,7 +8,7 @@ bob:
   type: LocalActor
   handle: bob
   display_name: Bob Ndlovu
-  discoverable: everyone
+  discoverable: members
 
 carol:
   type: LocalActor

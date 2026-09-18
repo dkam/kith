@@ -37,7 +37,7 @@ class MemberTest < ActiveSupport::TestCase
     assert_match "already has a member", member.errors.full_messages.to_sentence
   end
 
-  test "create_first makes an inviterless member, discoverable by everyone" do
+  test "create_first makes an inviterless member, discoverable by every member" do
     Member.destroy_all
 
     member = Member.create_first(handle: "zoe", display_name: nil, email_address: "zoe@example.com",
@@ -46,7 +46,7 @@ class MemberTest < ActiveSupport::TestCase
     assert member.persisted?
     assert_nil member.inviter_member
     assert_equal "zoe", member.display_name, "a blank name falls back to the handle"
-    assert member.actor.everyone?
+    assert member.actor.members?
   end
 
   test "reset_password! sets a random password and returns it" do

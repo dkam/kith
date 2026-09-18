@@ -47,12 +47,12 @@ class Visibility
   #
   # You may follow the link if it is your own, if you are connected to them
   # (mutual accepted follows), or if they have chosen to be discoverable by
-  # everyone. `connections_only` and `invisible` differ elsewhere; for the link
-  # itself they are the same answer.
+  # every member. `connections_only` and `invisible` differ elsewhere; for the
+  # link itself they are the same answer.
   def profile_link?(actor)
     return false if actor.nil? || signed_out?
     return true if actor.id == viewer.id
-    return true if actor.everyone?
+    return true if actor.members?
 
     viewer.connected_to?(actor)
   end

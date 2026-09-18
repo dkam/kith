@@ -53,7 +53,7 @@ class ActorTest < ActiveSupport::TestCase
 
   test "discoverable is one of three states and defaults to connections_only" do
     assert_equal "connections_only", LocalActor.new(handle: "zoe").discoverable
-    assert_equal %w[ everyone connections_only invisible ], Actor.discoverables.keys
+    assert_equal %w[ members connections_only invisible ], Actor.discoverables.keys
 
     refute LocalActor.new(handle: "zoe", discoverable: "nobody").valid?
   end

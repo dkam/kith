@@ -11,7 +11,7 @@ require "test_helper"
 #   carol  -> dave       rejected
 #
 #   alice   discoverable: connections_only
-#   bob     discoverable: everyone
+#   bob     discoverable: members
 #   carol   discoverable: invisible
 #   dave    discoverable: connections_only
 class VisibilityTest < ActiveSupport::TestCase
@@ -103,7 +103,7 @@ class VisibilityTest < ActiveSupport::TestCase
     assert as(:carol).profile_link?(actors(:carol))
   end
 
-  test "a discoverable-by-everyone member is always linked" do
+  test "a member discoverable by every member is always linked" do
     assert as(:dave).profile_link?(actors(:bob))
     assert as(:carol).profile_link?(actors(:bob))
   end

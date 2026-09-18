@@ -7,7 +7,7 @@
 class Actor < ApplicationRecord
   HANDLE_FORMAT = /\A[a-z0-9_]{2,32}\z/
 
-  enum :discoverable, { everyone: 0, connections_only: 1, invisible: 2 }, validate: true
+  enum :discoverable, { members: 0, connections_only: 1, invisible: 2 }, validate: true
 
   has_one :member, dependent: :destroy
 
