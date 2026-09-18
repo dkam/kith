@@ -58,36 +58,62 @@
   </div>
 <% end %>
 
-<%# The endpoint an assistant connects to. It reads; it cannot write, and it
-    cannot see anything its member couldn't — every tool behind it goes through
-    Visibility, the same as the feed. %>
-<section class="mt-12 border-t border-rule pt-8" data-controller="clipboard"
-         data-clipboard-label-value="Copy" data-clipboard-copied-label-value="Copied">
-  <h2 class="font-serif text-xl font-semibold">Your endpoint for assistants</h2>
+<%# The endpoints assistants connect to. Everything behind them goes through
+    Visibility, the same as the feed — a read-only endpoint can see exactly
+    what its member can see, and one that writes publishes under their name. %>
+<section class="mt-12 border-t border-rule pt-8">
+  <h2 class="font-serif text-xl font-semibold">Endpoints for assistants</h2>
   <p class="mt-2 max-w-prose text-sm text-quiet">
-    Paste this into an assistant that speaks MCP and it can read your feed, open
-    a post you can see, and list your notifications. It can't write anything,
-    and it can't see anything you can't. Anyone holding this link can read as
-    you, so keep it the way you'd keep a password — and reset it if it gets out.
+    An endpoint lets an assistant that speaks MCP read your feed, open a post
+    you can see, and list your notifications. One that can write also posts and
+    comments under your name, to the people who follow you. Nothing an endpoint
+    can reach is anything you couldn't reach yourself.
+  </p>
+  <p class="mt-2 max-w-prose text-sm text-quiet">
+    Anyone holding the link can use it, so keep each one the way you'd keep a
+    password. Make a separate endpoint for each thing you connect, and revoke
+    the one you don't recognise.
   </p>
 
-  <div class="mt-6">
-    <%= label_tag :mcp_endpoint, "Endpoint", class: "label" %>
-    <%= text_field_tag :mcp_endpoint, mcp_url(token: @mcp_token.token), readonly: true,
-          class: "field font-mono text-xs", data: { clipboard_target: "source" },
-          onfocus: "this.select()" %>
-  </div>
-
-  <div class="mt-4 flex flex-wrap items-center gap-5">
-    <button type="button" class="btn-quiet btn-sm" data-clipboard-target="button"
-            data-action="clipboard#copy">Copy</button>
-    <%= button_to "Reset", settings_mcp_token_path, method: :patch, class: "btn-plain" %>
-    <p class="font-sans text-sm text-meta">
-      <% if @mcp_token.last_used_at %>
-        Last used <%= time_ago_in_words @mcp_token.last_used_at %> ago
-      <% else %>
-        Not used yet
-      <% end %>
+  <% if @mcp_tokens.any? %>
+    <ul class="mt-6 divide-y divide-rule border-y border-rule">
+      <%= render @mcp_tokens %>
+    </ul>
+  <% else %>
+    <p class="mt-6 border-t border-rule pt-6 text-sm text-quiet">
+      You haven't made one yet.
     </p>
-  </div>
+  <% end %>
+
+  <%= form_with model: @new_mcp_token, scope: :mcp_token, url: settings_mcp_tokens_path, class: "mt-8 space-y-5" do |form| %>
+    <div>
+      <%= form.label :name, "Name a new endpoint", class: "label" %>
+      <%= form.text_field :name, required: true, maxlength: McpToken::NAME_LIMIT,
+            placeholder: "Claude on my phone", class: "field" %>
+      <p class="hint">So you know which is which when you come to revoke one.</p>
+    </div>
+
+    <fieldset>
+      <legend class="label">What it may do</legend>
+      <div class="space-y-3">
+        <label class="choice">
+          <%= form.radio_button :access, :read_only, checked: true, class: "radio" %>
+          <span>
+            <span class="choice-label">Read only</span>
+            <span class="choice-note">Your feed, posts you can already see, and your notifications. It can't write anything.</span>
+          </span>
+        </label>
+        <label class="choice">
+          <%= form.radio_button :access, :read_write, class: "radio" %>
+          <span>
+            <span class="choice-label">Read and write</span>
+            <span class="choice-note">All of that, and it can write posts and comments as you. A post it writes reaches your followers, and its audience can never be changed afterwards.</span>
+          </span>
+        </label>
+      </div>
+      <p class="hint">Fixed when you make it. To change it, revoke this one and make another.</p>
+    </fieldset>
+
+    <%= form.submit "Make an endpoint", class: "btn-quiet" %>
+  <% end %>
 </section>

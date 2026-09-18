@@ -11,7 +11,7 @@ class Member < ApplicationRecord
   has_many :issued_invites, class_name: "Invite", foreign_key: :inviter_member_id, dependent: :destroy
   has_one :claimed_invite, class_name: "Invite", foreign_key: :claimed_by_member_id, dependent: :nullify
   has_many :feed_items, dependent: :delete_all
-  has_one :mcp_token, dependent: :destroy
+  has_many :mcp_tokens, dependent: :destroy
   has_many :notifications, dependent: :delete_all
   has_many :invited_members, class_name: "Member", foreign_key: :inviter_member_id, dependent: :nullify
 
@@ -24,10 +24,38 @@ class Member < ApplicationRecord
 
   delegate :handle, :display_name, :discoverable, to: :actor
 
-  # The member's MCP endpoint, made the first time they go looking for it.
-  # Nobody is issued a credential they never asked to see.
-  def mcp_token!
-    mcp_token || create_mcp_token!
+  # Password resets happen in the console. There is no mail flow and, for a few
+  # dozen friends, there does not need to be one: the operator is reachable.
+  #
+  #   Member.reset_password! "alice@example.com"   # => a new random password
+  #   Member.reset_password! "@alice", "correct horse battery staple"
+  #
+  # Takes an email address or a handle, and makes a password up if you do not
+  # give it one. Returns the new password, so the console prints it.
+  def self.reset_password!(identifier, password = nil)
+    find_by_identifier!(identifier).reset_password!(password)
+  end
+
+  # Whichever of the two things the operator has to hand: the address they mail
+  # the person at, or the handle they know them by.
+  def self.find_by_identifier!(identifier)
+    given = identifier.to_s.strip.downcase.delete_prefix("@")
+
+    find_by(email_address: given) ||
+      LocalActor.find_by(handle: given)&.member ||
+      raise(ActiveRecord::RecordNotFound, "No member with the email address or handle #{identifier.inspect}")
+  end
+
+  # Signs the member out everywhere as well, because a password is usually
+  # being reset for one of two reasons, and one of them is that somebody else
+  # knows the old one.
+  def reset_password!(password = nil)
+    password ||= SecureRandom.alphanumeric(24)
+
+    update!(password: password, password_confirmation: password)
+    sessions.destroy_all
+
+    password
   end
 
   # The only way a member is created outside the first-member rake task: by

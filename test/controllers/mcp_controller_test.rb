@@ -5,7 +5,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     # Materialise the fixture posts into everyone's feeds, as writing them
     # would have.
     Post.find_each { |post| FanOutJob.perform_now(post) }
-    @token = mcp_tokens(:alice)
+    @token = mcp_tokens(:alice_reader)
   end
 
   # --- The endpoint itself --------------------------------------------------
@@ -67,11 +67,26 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   # --- The tools ------------------------------------------------------------
 
-  test "the endpoint offers four read-only tools" do
+  test "a read-only endpoint is never told the writing tools exist" do
     tools = call("tools/list").dig("result", "tools")
 
     assert_equal %w[ whoami feed post notifications ].sort, tools.map { |tool| tool["name"] }.sort
     assert tools.all? { |tool| tool.dig("annotations", "readOnlyHint") }, "every tool says it only reads"
+  end
+
+  test "a read and write endpoint is offered the writing tools too" do
+    tools = call("tools/list", token: mcp_tokens(:alice_writer)).dig("result", "tools")
+
+    assert_equal %w[ whoami feed post notifications write_post comment mark_read ].sort,
+      tools.map { |tool| tool["name"] }.sort
+  end
+
+  test "a read-only endpoint cannot reach a writing tool by asking for it" do
+    assert_no_difference -> { Post.count } do
+      result = call("tools/call", name: "write_post", arguments: { body: "Sneaking one in." })
+
+      assert_equal JsonRpcHandler::ErrorCode::INVALID_PARAMS, result.dig("error", "code")
+    end
   end
 
   test "whoami answers about the token's member" do
@@ -79,7 +94,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes text, "@alice"
     assert_includes text, "Alice Brennan"
-    assert_includes text, "read only"
+    assert_includes text, "Alice's laptop — read only"
   end
 
   test "the feed is your own posts and those of people you follow" do

@@ -1,0 +1,28 @@
+<%# One endpoint: what it's called, what it may do, and the URL to paste. %>
+<li class="py-5" id="<%= dom_id mcp_token %>" data-controller="clipboard"
+    data-clipboard-label-value="Copy" data-clipboard-copied-label-value="Copied">
+  <div class="flex items-baseline justify-between gap-4">
+    <p class="font-sans text-sm font-medium text-ink"><%= mcp_token.name %></p>
+    <p class="micro shrink-0"><%= mcp_token.access_label %></p>
+  </div>
+
+  <%= text_field_tag "mcp_endpoint_#{mcp_token.id}", mcp_url(token: mcp_token.token), readonly: true,
+        "aria-label": "Endpoint for #{mcp_token.name}", class: "field mt-2 font-mono text-xs",
+        data: { clipboard_target: "source" }, onfocus: "this.select()" %>
+
+  <div class="mt-3 flex flex-wrap items-center gap-5">
+    <button type="button" class="btn-quiet btn-sm" data-clipboard-target="button"
+            data-action="clipboard#copy">Copy</button>
+    <%= button_to "Reset", settings_mcp_token_path(mcp_token), method: :patch, class: "btn-plain" %>
+    <%= button_to "Revoke", settings_mcp_token_path(mcp_token), method: :delete, class: "btn-plain" %>
+    <p class="font-sans text-sm text-meta">
+      <% if mcp_token.last_used_at %>
+        Last used <%= time_ago_in_words mcp_token.last_used_at %> ago
+      <% else %>
+        Not used yet
+      <% end %>
+    </p>
+  </div>
+
+  <%= render "mcp_tokens/how_to_connect", mcp_token: mcp_token %>
+</li>

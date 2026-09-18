@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_18_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_010000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -121,7 +121,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_000000) do
     t.datetime "created_at", null: false
     t.datetime "last_used_at"
     t.integer "member_id", null: false
-    t.string "name"
+    t.string "name", null: false
     t.string "token", null: false
     t.datetime "updated_at", null: false
     t.index ["member_id"], name: "index_mcp_tokens_on_member_id"

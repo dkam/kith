@@ -107,10 +107,12 @@ Integer primary keys. Don't reach for UUIDs.
 - **`notifications`** — `member_id`, `actor_id`, `subject` (polymorphic),
   `kind`, `read_at`.
 - **`mcp_tokens`** — `member_id`, `token`, `name`, `access` enum, `last_used_at`.
-  The credential behind a member's MCP endpoint. One row per member today; the
-  table is shaped for several, because "Claude on my phone" and "the laptop"
-  will want telling apart, and because a token that may one day write is
-  another `access` value rather than another table.
+  The credential behind one of a member's MCP endpoints. A member holds as many
+  as they like, named, because a reader on the phone and something that writes
+  on the desktop are not the same grant. `access` is `read_only` or
+  `read_write`, integer-backed and sparse so narrower grants fit between them,
+  and it is **fixed at issue** — a token handed out as read-only never quietly
+  becomes able to write. To change it, revoke and reissue.
 
 ### Deviations from the original brief, and why
 
@@ -235,6 +237,9 @@ bin/rubocop            # rails-omakase
 bin/brakeman           # security scan
 bin/rails kith:first_member[email,handle,name]
 bin/rails kith:setup_code   # reprint the setup code, while nobody has joined
+
+# forgotten password — from bin/rails console, or bin/rails runner
+Member.reset_password!("alice@example.com")   # => the new password; also signs them out
 ```
 
 ---
@@ -256,8 +261,13 @@ bin/rails kith:setup_code   # reprint the setup code, while nobody has joined
 6. Flat comments with the gated profile-link rule.
 7. Notifications: new follower, follow accepted, new comment on your post.
 8. `MediaController` as specified.
-9. A per-member MCP endpoint, read-only, reachable from settings with a copy
-   and a reset button. Added 2026-09-18, after the original eight.
+9. MCP endpoints, added 2026-09-18 after the original eight. A member makes as
+   many as they want from settings, each named and each either read-only or
+   read-and-write, with copy, reset and revoke, and per-client instructions for
+   Claude Code, opencode and Claude Desktop. The tools are `whoami`, `feed`,
+   `post`, `notifications`, and — only on a read-and-write endpoint —
+   `write_post`, `comment` and `mark_read`. A read-only endpoint is never told
+   the writing tools exist; `McpServer.tools_for` decides once, from the grant.
 
 **Not in phase 1**: federation, ActivityPub, RSS ingest, circles, likes,
 passkeys, search, DMs.
@@ -299,6 +309,10 @@ passkeys, search, DMs.
   the request line and the parameters come out `[FILTERED]`. What filtering
   does *not* cover is the SQL echo in development, which is why
   `McpController#authenticate_token` silences the logger around the lookup.
+- **An agent hands us text, never markup.** `write_post` takes plain text and
+  makes the paragraphs itself, escaping as it goes. Kith stores HTML because
+  the editor produces HTML; nothing is gained by letting a JSON-RPC caller
+  choose the markup that gets stored.
 - **Lexxy's stylesheet is unlayered, and unlayered CSS beats every cascade
   layer** however specific the layered selector is. Overrides for it therefore
   sit outside `@layer components` in `app/assets/tailwind/application.css`;

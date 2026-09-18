@@ -16,9 +16,9 @@ Rails.application.routes.draw do
   resources :invites, only: %i[ index create destroy ]
 
   resource :settings, only: %i[ show update ], controller: "settings" do
-    # Resetting the MCP endpoint. The old token stops working the moment this
-    # returns, which is the point of the button.
-    resource :mcp_token, only: :update
+    # A member's agent endpoints. `update` is the reset button: the old token
+    # stops working the moment it returns, which is the point of it.
+    resources :mcp_tokens, only: %i[ create update destroy ]
   end
 
   resources :posts, except: :index do

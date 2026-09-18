@@ -17,7 +17,7 @@ module McpTools
         Discoverable by: #{actor.discoverable.humanize.downcase}
         Following: #{actor.followees.count} · Followers: #{actor.followers.count}
         Unread in your feed: #{unread_count(member, server_context.visibility)}
-        This endpoint: #{server_context.access.humanize.downcase}
+        This endpoint: #{server_context.name} — #{server_context.access_label}
       REPORT
     end
 

@@ -1,12 +1,14 @@
 class SettingsController < ApplicationController
   def show
     @actor = current_actor
-    @mcp_token = current_member.mcp_token!
+    @mcp_tokens = current_member.mcp_tokens.oldest_first
+    @new_mcp_token = McpToken.new
   end
 
   def update
     @actor = current_actor
-    @mcp_token = current_member.mcp_token!
+    @mcp_tokens = current_member.mcp_tokens.oldest_first
+    @new_mcp_token = McpToken.new
 
     if @actor.update(actor_params)
       redirect_to settings_path, notice: "Saved."
