@@ -138,6 +138,25 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", "On keeping a notebook"
   end
 
+  # Readable and findable are different grants. Alice is `connections_only`:
+  # her public post stays reachable to anyone holding the link, and out of the
+  # index. Erin asked for the web, so hers goes in.
+  test "a public permalink is indexed only when its author chose the web" do
+    get post_url(posts(:alice_public))
+    assert_select "meta[name=robots][content=?]", "noindex, nofollow"
+
+    erin = actors(:erin)
+    get post_url(erin.posts.create!(title: "In the open", audience: :public, body: "<p>Anyone.</p>"))
+    assert_select "meta[name=robots][content=?]", "index, follow"
+  end
+
+  test "a signed-in member never sees an indexable page, even a public one" do
+    sign_in_as members(:bob)
+    get post_url(posts(:alice_public))
+
+    assert_select "meta[name=robots][content=?]", "noindex, nofollow"
+  end
+
   test "a post that does not exist gets the same 404 as one you may not see" do
     sign_in_as members(:dave)
 

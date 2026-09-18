@@ -6,6 +6,10 @@ class PostsController < ApplicationController
   def show
     @comments = visibility.visible_comments(@post).includes(:actor)
     @comment = Comment.new(post: @post)
+
+    # Signed out, we are already only here because the post is public; whether
+    # it is also *findable* is the author's rung to decide.
+    allow_indexing_by @post.actor
   end
 
   def new

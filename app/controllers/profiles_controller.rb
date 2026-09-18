@@ -33,6 +33,7 @@ class ProfilesController < ApplicationController
     # a signed-in member — a follow button, and their followers-only posts —
     # and a shared cache knows nothing about anybody's session.
     def render_anonymously
+      allow_indexing_by @actor
       expires_in 5.minutes, public: true
       render :anonymous
     end

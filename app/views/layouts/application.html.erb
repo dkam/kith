@@ -6,8 +6,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Kith">
     <meta name="mobile-web-app-capable" content="yes">
-    <%# Private by default: never let a post or a photo end up in a search index. %>
-    <meta name="robots" content="noindex, nofollow">
+    <%# Private by default: a post or a photo reaches a search index only from a
+        page that asked to be indexed, which needs a signed-out visitor and an
+        author who chose the web. See ApplicationController#allow_indexing_by. %>
+    <meta name="robots" content="<%= indexable? ? "index, follow" : "noindex, nofollow" %>">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 

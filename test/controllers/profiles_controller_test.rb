@@ -125,6 +125,15 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(actors(:erin), :follow_button)}"
   end
 
+  test "only the web's copy of a profile is indexable, and only for the web rung" do
+    get profile_url("erin")
+    assert_select "meta[name=robots][content=?]", "index, follow"
+
+    sign_in_as members(:bob)
+    get profile_url("erin")
+    assert_select "meta[name=robots][content=?]", "noindex, nofollow"
+  end
+
   test "handles are case insensitive" do
     sign_in_as members(:bob)
     get profile_url("ALICE")
