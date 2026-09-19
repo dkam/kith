@@ -15,10 +15,12 @@
 
     <%= yield :head %>
 
-    <%# Literata reads what a member wrote; Barlow does everything they operated. %>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&family=Barlow:wght@400;500;600&display=swap">
+    <%# Literata reads what a member wrote; Barlow does everything they operated.
+        Both are served from app/assets/fonts — see the faces in the stylesheet.
+        The two latin romans are preloaded because they set the first screen;
+        the italic and the ext subsets can arrive when they are needed. %>
+    <link rel="preload" href="<%= asset_path("literata-var-latin.woff2") %>" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<%= asset_path("barlow-400-latin.woff2") %>" as="font" type="font/woff2" crossorigin>
 
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
