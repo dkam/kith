@@ -21,6 +21,8 @@ Rails.application.routes.draw do
     resources :mcp_tokens, only: %i[ create update destroy ]
   end
 
+  delete "settings/avatar", to: "settings#destroy_avatar", as: :settings_avatar
+
   resources :posts, except: :index do
     resources :comments, only: :create
   end

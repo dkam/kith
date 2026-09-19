@@ -6,6 +6,12 @@
   Handles don't change — other people's links to you depend on it.
 </p>
 
+<%# Removing the photo is its own request, and forms cannot nest — so it sits
+    out here and the button inside the settings form points at it by id. %>
+<% if @actor.avatar.attached? %>
+  <%= form_with url: settings_avatar_path, method: :delete, id: "remove-avatar", class: "hidden" do %><% end %>
+<% end %>
+
 <%# scope: the record is a LocalActor, but the form speaks of actors. %>
 <%= form_with model: @actor, scope: :actor, url: settings_path, method: :patch, class: "mt-8 space-y-8" do |form| %>
   <% if @actor.errors.any? %>
@@ -24,13 +30,24 @@
     <p class="hint">What your friends call you.</p>
   </div>
 
-  <div>
+  <%# paste@document: nobody focuses a file button before pressing paste. %>
+  <div data-controller="avatar" data-action="paste@document->avatar#paste">
     <span class="label">Photo</span>
     <div class="flex items-center gap-4">
-      <%= avatar_tag @actor, css_class: "avatar size-16" %>
-      <%= form.file_field :avatar, accept: "image/jpeg,image/png,image/webp", direct_upload: true, class: "text-sm text-quiet file:mr-3 file:rounded-sm file:border file:border-rule-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:text-ink" %>
+      <span data-avatar-target="preview" data-avatar-class="avatar size-16">
+        <%= avatar_tag @actor, css_class: "avatar size-16" %>
+      </span>
+      <div class="space-y-2">
+        <%= form.file_field :avatar, accept: "image/jpeg,image/png,image/webp", direct_upload: true,
+              class: "block text-sm text-quiet file:mr-3 file:rounded-sm file:border file:border-rule-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:text-ink",
+              data: { avatar_target: "input", action: "avatar#show" } %>
+        <% if @actor.avatar.attached? %>
+          <button type="submit" form="remove-avatar" class="btn-plain">Remove photo</button>
+        <% end %>
+      </div>
     </div>
-    <p class="hint">Location and camera data are removed from anything you upload.</p>
+    <p class="hint">Choose one, or paste a photo anywhere on this page. Location and camera data are removed from anything you upload.</p>
+    <p class="hint" role="status" data-avatar-target="status"></p>
   </div>
 
   <fieldset>

@@ -63,6 +63,49 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "img[src*='/rails/active_storage/']", false
   end
 
+  test "removing your photo" do
+    actors(:alice).avatar.attach(io: file_fixture("portrait.jpg").open, filename: "portrait.jpg", content_type: "image/jpeg")
+
+    delete settings_avatar_url
+
+    assert_redirected_to settings_url
+    assert_not actors(:alice).reload.avatar.attached?
+  end
+
+  test "removing a photo you do not have is harmless" do
+    delete settings_avatar_url
+
+    assert_redirected_to settings_url
+    assert_not actors(:alice).reload.avatar.attached?
+  end
+
+  test "removing a photo only ever removes your own" do
+    actors(:alice).avatar.attach(io: file_fixture("portrait.jpg").open, filename: "portrait.jpg", content_type: "image/jpeg")
+    sign_out
+    sign_in_as members(:bob)
+
+    delete settings_avatar_url
+
+    assert actors(:alice).reload.avatar.attached?
+  end
+
+  test "the remove button appears only when there is a photo to remove" do
+    get settings_url
+    assert_select "form[action=?]", settings_avatar_path, false
+
+    actors(:alice).avatar.attach(io: file_fixture("portrait.jpg").open, filename: "portrait.jpg", content_type: "image/jpeg")
+
+    get settings_url
+    assert_select "form[action=?]", settings_avatar_path
+  end
+
+  test "removing a photo requires signing in" do
+    sign_out
+    delete settings_avatar_url
+
+    assert_redirected_to new_session_url
+  end
+
   test "settings always act on your own actor, whatever the params say" do
     sign_out
     sign_in_as members(:bob)

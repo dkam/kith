@@ -17,6 +17,12 @@ class SettingsController < ApplicationController
     end
   end
 
+  # Nothing is soft-deleted: the file goes, not a flag.
+  def destroy_avatar
+    current_actor.avatar.purge
+    redirect_to settings_path, notice: "Photo removed."
+  end
+
   private
     # The handle is deliberately absent: it is how other people refer to you,
     # and it will become half of a federated address. Changing it would break
