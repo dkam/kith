@@ -11,4 +11,11 @@
 # image tag but does not move :latest and does not tag the commit.
 module Kith
   VERSION = "0.1.0-dev"
+
+  # The oldest phone app this instance will talk to, published in its NodeInfo
+  # so a shell can say "this Kith needs a newer Kith" rather than failing in
+  # some interesting way three screens later. A third number again: it answers
+  # "what does the server require of a client", which is neither what release
+  # this is nor what commit it is.
+  MINIMUM_NATIVE_VERSION = "1.0.0"
 end

@@ -70,6 +70,14 @@ Rails.application.routes.draw do
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
+  # Every Kith is somebody else's, so a phone app has to be told which one it
+  # is talking to — and then has to check. NodeInfo is the answer the rest of
+  # the fediverse already gives to that question, which makes this a federation
+  # seam rather than a phone one: whatever else learns to read Kith later will
+  # look here first.
+  get ".well-known/nodeinfo", to: "node_info#index", as: :nodeinfo_index, defaults: { format: :json }
+  get "nodeinfo/2.1", to: "node_info#show", as: :nodeinfo, defaults: { format: :json }
+
   # The phone apps' navigation rules. The shells fetch these at launch, so
   # which screen is a modal and which pushes can change without a new build.
   #
