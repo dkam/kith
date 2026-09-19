@@ -12,6 +12,10 @@ class FeedItemsController < ApplicationController
   def read_all
     current_member.feed_items.unread.update_all(read_at: Time.current, updated_at: Time.current)
 
-    redirect_to root_path, notice: "All marked as read."
+    # A redirect back to the page you are already on pushes a second copy of
+    # it onto an app's navigation stack. `refresh_or_redirect_to` is
+    # turbo-rails' answer: the app refreshes the screen it is on, the web gets
+    # the redirect it always got.
+    refresh_or_redirect_to root_path, notice: "All marked as read."
   end
 end

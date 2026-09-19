@@ -75,4 +75,21 @@ class HotwireNativeTest < ActionDispatch::IntegrationTest
     get root_url, headers: native_headers
     assert_select "##{ActionView::RecordIdentifier.dom_id(posts(:carol_followers))}", false
   end
+
+  # A redirect to the page you are already on pushes a second copy of it onto
+  # the stack. The app is told to refresh instead; the web keeps the redirect
+  # it always had.
+  test "marking everything read refreshes the app instead of pushing a screen" do
+    post read_all_feed_items_url, headers: native_headers
+    assert_match %r{/refresh_historical_location}, response.location
+
+    post read_all_notifications_url, headers: native_headers
+    assert_match %r{/refresh_historical_location}, response.location
+
+    post read_all_feed_items_url
+    assert_redirected_to root_path
+
+    post read_all_notifications_url
+    assert_redirected_to notifications_path
+  end
 end
