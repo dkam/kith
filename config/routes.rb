@@ -70,6 +70,16 @@ Rails.application.routes.draw do
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
+  # The phone apps' navigation rules. The shells fetch these at launch, so
+  # which screen is a modal and which pushes can change without a new build.
+  #
+  # The version is in the name because a build that has shipped keeps asking
+  # for the shape it was written against: ios_v1 may gain rules, but it may
+  # never change what one of them means. When it needs to, that is ios_v2 and
+  # a new build. See app/views/configurations.
+  get "configurations/:name", to: "configurations#show", as: :hotwire_configuration,
+    constraints: { name: /(ios|android)_v1/ }, defaults: { format: :json }
+
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check
 end
