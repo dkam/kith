@@ -1,0 +1,14 @@
+<%# Everything that makes Kith installable from a browser: the manifest, the
+    icons a home screen draws it with, and the service worker registration.
+
+    The phone apps' layout does not render this. They are already an icon on a
+    home screen, and a service worker inside a WebView is a second cache with
+    opinions about a device that already has a native one. Absent by not being
+    rendered, rather than by a check on the user agent — there is no third
+    place for this to get out of step. %>
+<link rel="manifest" href="<%= pwa_manifest_path %>">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<%= javascript_import_module_tag "pwa" %>
