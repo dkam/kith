@@ -118,3 +118,15 @@
     <%= form.submit "Make an endpoint", class: "btn-quiet" %>
   <% end %>
 </section>
+
+<%# On the web the masthead carries these. In the phone apps there is no
+    masthead — the shell draws the navigation, and Invites and signing out are
+    not tabs — so this page is the way to both. It reads as a tidy-up on the
+    web too: Settings had no route to Invites at all. %>
+<section class="mt-12 border-t border-rule pt-8">
+  <h2 class="font-serif text-xl font-semibold">Elsewhere</h2>
+  <div class="mt-4 flex flex-wrap items-center gap-5">
+    <%= link_to "Invites", invites_path, class: "btn-plain" %>
+    <%= button_to "Sign out", session_path, method: :delete, class: "btn-plain" %>
+  </div>
+</section>
