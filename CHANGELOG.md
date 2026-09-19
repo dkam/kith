@@ -9,6 +9,51 @@ The MCP server carries its own number, `McpServer::VERSION`, because it is a
 published interface with clients on the other end of it. It moves when its tools
 do, independently of the release version.
 
+## 2026-09-19
+
+### Kith installs to a home screen
+
+Forty people read this on a phone, and a browser tab is the wrong container for
+something you open every day. A manifest and a service worker make Kith
+installable on both platforms: its own icon, its own window, no browser chrome.
+The manifest is rendered from `app/views/pwa`, so it is built from the same
+tokens the stylesheet is.
+
+- The service worker caches **nothing anybody wrote** — no documents, no
+  `/media/`, no JSON. Only the digested assets under `/assets/`, which are
+  identical for everyone. A phone is shared, lent and lost, and the Cache API is
+  a plain readable store that outlives the session cookie and that `Visibility`
+  gets no say over. It exists because a browser will not offer to install an app
+  with no fetch handler, and because a cold launch should not render in Times.
+- Installed, the page paints under the status bar and the home indicator, so the
+  masthead and the reading column pay the safe-area insets back. Off a phone
+  every inset resolves to `0px` and nothing moves.
+- An icon, at last: the letter K in Literata 600, ink on paper. No mark was ever
+  drawn for Kith and none has been invented — the design system says the word is
+  set in Literata wherever a mark would go, and this is its first letter. No
+  terracotta; an app icon is not one of the four places the accent is allowed.
+
+### Sharing a link opens the composer
+
+Kith appears in the phone's share sheet, and sharing to it opens the composer
+with the link already in it. It only prefills — nothing is written until the
+member presses the button, and the audience is theirs to pick as always. A share
+is treated as text rather than markup, for the same reason `write_post` is, and
+that conversion moved from `McpTools::WritePost` to `Post.paragraphs` now that
+two callers want it.
+
+Photographs can't be shared in yet: taking files needs a POST target and
+somewhere to put them before a post exists, which is more than a prefill.
+
+### Literata and Barlow are served from here
+
+Both families were fetched from Google on every page load. An installed app gets
+opened with no network and a cold cache, and a masthead that renders in Times
+for a second reads as broken; the font stylesheet was also the last third party
+left in the page, and who reads Kith, and when, is nobody else's to observe.
+Ten woff2 files, latin and latin-ext, 328KB once and cached after. Literata is
+variable over 400..600, so three roman weights are one file.
+
 ## 2026-09-18
 
 ### Discoverability grew a rung, and a profile can reach the web
