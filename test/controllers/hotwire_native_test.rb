@@ -92,4 +92,17 @@ class HotwireNativeTest < ActionDispatch::IntegrationTest
     post read_all_notifications_url
     assert_redirected_to notifications_path
   end
+
+  # The only response in Kith that a shared cache may keep. It renders a
+  # different body to an app than to a browser, so it has to say so.
+  test "a publicly cached profile says it varies by client" do
+    sign_out
+
+    get profile_url("erin"), headers: native_headers
+
+    assert_response :success
+    assert_match "public", response.headers["Cache-Control"]
+    assert_match "User-Agent", response.headers["Vary"]
+    assert_select "link[rel=manifest]", false
+  end
 end

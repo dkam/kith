@@ -32,9 +32,14 @@ class ProfilesController < ApplicationController
     # Cacheable only on this branch. The same URL renders a different body to a
     # a signed-in member — a follow button, and their followers-only posts —
     # and a shared cache knows nothing about anybody's session.
+    #
+    # It now renders a different body to a phone app too, which has no masthead
+    # and no manifest. No shared cache is deployed today, but this is the line
+    # that stops the first one handing a browser an app's page.
     def render_anonymously
       allow_indexing_by @actor
       expires_in 5.minutes, public: true
+      response.headers["Vary"] = [ response.headers["Vary"], "User-Agent" ].compact_blank.join(", ")
       render :anonymous
     end
 end
