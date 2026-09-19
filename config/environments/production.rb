@@ -25,13 +25,20 @@ Rails.application.configure do
   config.active_storage.service = :local
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  # config.assume_ssl = true
+  config.assume_ssl = true
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  # config.force_ssl = true
+  #
+  # The last clause is the one that matters most here. A member's session cookie
+  # is set `permanent` — twenty years — and it now lives on a phone rather than
+  # on a laptop that goes in a drawer. Without this it is sent without `Secure`,
+  # which is to say it is sent over any network that can persuade the phone to
+  # make one cleartext request. It is also a hard requirement of the phone apps:
+  # App Transport Security will not load a cleartext origin at all.
+  config.force_ssl = true
 
   # Skip http-to-https redirect for the default health check endpoint.
-  # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
+  config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
 
   # Log to STDOUT with the current request id as a default log tag.
   config.log_tags = [ :request_id ]
@@ -58,7 +65,9 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  # The same hostname again, for the same reason: a password-reset link is an
+  # absolute URL, and the generator's placeholder sends it to somebody else.
+  config.action_mailer.default_url_options = { host: ENV.fetch("KITH_HOST", "example.com"), protocol: "https" }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
   # config.action_mailer.smtp_settings = {
@@ -80,11 +89,13 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
   #
+  # Every Kith is somebody else's, so the hostname cannot be written down here;
+  # it is whatever the person running this instance put in KITH_HOST. Left
+  # unset, Rails answers to any Host header, which is how an absolute URL in a
+  # password-reset mail comes to point somewhere else entirely.
+  config.hosts << ENV["KITH_HOST"] if ENV["KITH_HOST"].present?
+
   # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end
