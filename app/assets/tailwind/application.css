@@ -327,6 +327,18 @@
  * -------------------------------------------------------------------------- */
 
 @layer components {
+  /* Safe areas. Installed to a home screen the page paints edge to edge
+     (viewport-fit=cover in the layout), so the chrome pays the hardware back:
+     the masthead clears the status bar, the reading column clears the home
+     indicator. Off a phone every inset resolves to 0px and nothing moves. */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .pb-safe {
+    padding-bottom: calc(--spacing(10) + env(safe-area-inset-bottom, 0px));
+  }
+
   /* Buttons. Three variants, and this is the only button in the system.
      Controls warm rather than darken on hover; nothing scales or lifts. */
   .btn {
