@@ -32,25 +32,17 @@ module McpTools
     )
 
     def self.call(body:, server_context:, title: nil, audience: "followers")
-      post = ::Post.new(actor: server_context.actor, title: title, audience: audience, body: paragraphs(body))
+      post = ::Post.new(actor: server_context.actor, title: title, audience: audience, body: ::Post.paragraphs(body))
 
       return refused(post) unless post.save
 
       text "Posted. #{post_line(post)}"
     end
 
-    # Escaped, because this is text a person typed and not markup we asked for.
-    def self.paragraphs(body)
-      body.to_s.split(/\r?\n\s*\r?\n/).filter_map { |para|
-        stripped = para.strip
-        "<p>#{ERB::Util.html_escape(stripped)}</p>" if stripped.present?
-      }.join
-    end
-
     def self.refused(post)
       MCP::Tool::Response.new([ { type: "text", text: post.errors.full_messages.to_sentence } ], error: true)
     end
 
-    private_class_method :paragraphs, :refused
+    private_class_method :refused
   end
 end

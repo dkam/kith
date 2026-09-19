@@ -41,6 +41,17 @@ class Post < ApplicationRecord
 
   def local? = !remote?
 
+  # Plain text into the HTML the body column actually holds. Escaped, because
+  # every caller is handing us something a person typed or another app handed
+  # them — an agent through `write_post`, a phone through the share sheet — and
+  # nothing is gained by letting either choose the markup that gets stored.
+  def self.paragraphs(text)
+    text.to_s.split(/\r?\n\s*\r?\n/).filter_map { |para|
+      stripped = para.strip
+      "<p>#{ERB::Util.html_escape(stripped)}</p>" if stripped.present?
+    }.join
+  end
+
   # The photographs embedded in the body, as Active Storage attachments —
   # which is what MediaController serves and what Visibility checks.
   def photos
