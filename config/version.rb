@@ -9,5 +9,5 @@
 #
 # Bumping this on main *is* the release. See CHANGELOG.md.
 module Kith
-  VERSION = "0.1.0"
+  VERSION = "0.2.0"
 end
