@@ -1,0 +1,143 @@
+# Production Compose for Kith — a web container and a worker container, four
+# SQLite files and everybody's photographs in one volume.
+#
+#   cp .env.example .env
+#
+# Generate every secret it needs, straight into that file:
+#
+#   {
+#     echo "SECRET_KEY_BASE=$(openssl rand -hex 64)"
+#     echo "AR_ENCRYPTION_PRIMARY_KEY=$(openssl rand -hex 32)"
+#     echo "AR_ENCRYPTION_DETERMINISTIC_KEY=$(openssl rand -hex 32)"
+#     echo "AR_ENCRYPTION_KEY_DERIVATION_SALT=$(openssl rand -hex 32)"
+#   } >> .env
+#
+#   docker compose up -d
+#   docker compose logs web        # the setup code is printed here, once
+#
+# `openssl rand -hex N` is N random bytes printed as 2N hex characters.
+# `bin/rails secret` and `bin/rails db:encryption:init` produce equivalents,
+# but openssl is already on the host and does not need the app to boot.
+#
+# Then open /setup and type the code in. That becomes the first member, and the
+# code stops being printed; everyone after arrives through an invite. If you
+# miss it: `docker compose exec web bin/rails kith:setup_code`.
+#
+# The volume is bind-mounted relative to this file, so **do not run this from a
+# checkout you develop in**: ./storage there is your development storage, and
+# the container would drop production.sqlite3 and everyone's photographs in
+# among it. Copy this file to the host it deploys on, beside a ./storage you
+# actually back up — it holds the database *and* the photographs, and nothing
+# in Kith is soft-deleted.
+#
+# Kith listens on :80 inside the container (Thruster, in front of Puma) and
+# expects to sit behind a TLS-terminating proxy. It needs to know the address
+# that proxy answers on — KITH_HOST — because every link in an email is built
+# from it and every Host header is checked against it. Without it the container
+# refuses to start rather than guess.
+
+x-kith: &kith
+  image: git.booko.info/dkam/kith:latest
+  pull_policy: always   # :latest moves on each release — re-pull on `up -d`
+  restart: unless-stopped
+
+  volumes:
+    # SQLite (primary, cache, queue, cable) and Active Storage's blobs, which
+    # live under the same root. One directory, one backup.
+    #
+    # The image runs as uid 1000, so the host directory must be writable by it:
+    #   mkdir -p storage && sudo chown 1000:1000 storage
+    - ./storage:/rails/storage
+
+  environment: &kith-env
+    RAILS_ENV: production
+
+    # Signs every cookie, and the setup code is derived from it:
+    #
+    #   openssl rand -hex 64
+    #
+    # Change it and every session ends and the setup code changes.
+    SECRET_KEY_BASE: ${SECRET_KEY_BASE:?set SECRET_KEY_BASE in .env}
+
+    # Active Record encryption. Exactly one column is encrypted —
+    # LocalActor#private_key — and **nothing in Kith writes it yet**: it is the
+    # seam left for federation, which does not exist. The column is NULL on
+    # every row, Rails boots perfectly well with these unset, and the day
+    # something does write a key it will fail loudly rather than quietly.
+    #
+    # They are optional today, so setting them is simply one fewer thing to do
+    # later. One command each:
+    #
+    #   openssl rand -hex 32
+    #
+    # Rails' own `db:encryption:init` generates 32 alphanumeric characters;
+    # -hex 32 gives 64 hex characters, which is more entropy, not less. Any
+    # secret of a decent length works — these are keys, not a fixed format.
+    #
+    # Once something *is* encrypted these become unlosable: no amount of
+    # SECRET_KEY_BASE brings an encrypted column back without them.
+    AR_ENCRYPTION_PRIMARY_KEY: ${AR_ENCRYPTION_PRIMARY_KEY:-}
+    AR_ENCRYPTION_DETERMINISTIC_KEY: ${AR_ENCRYPTION_DETERMINISTIC_KEY:-}
+    AR_ENCRYPTION_KEY_DERIVATION_SALT: ${AR_ENCRYPTION_KEY_DERIVATION_SALT:-}
+
+    # The address members reach this Kith at, with no scheme and no path:
+    # kith.example.com. Required — production.rb raises without it.
+    KITH_HOST: ${KITH_HOST:?set KITH_HOST in .env — the hostname Kith is served on}
+
+    # Outgoing mail. Kith sends exactly one email, the password reset, and
+    # without a relay that is the one path that does not work; everything else
+    # is unaffected. Leave them unset until you have somewhere to send through.
+    SMTP_ADDRESS: ${SMTP_ADDRESS:-}
+    SMTP_PORT: ${SMTP_PORT:-587}
+    SMTP_USER_NAME: ${SMTP_USER_NAME:-}
+    SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+
+    # Who the reset comes from. Defaults to kith@$KITH_HOST, which is right
+    # unless your relay insists on sending as a mailbox it hosts.
+    KITH_MAIL_FROM: ${KITH_MAIL_FROM:-}
+
+    # database.yml reads this for the connection pool. Keep it at or above
+    # Puma's thread count, which is the same variable.
+    RAILS_MAX_THREADS: ${RAILS_MAX_THREADS:-5}
+    RAILS_LOG_LEVEL: ${RAILS_LOG_LEVEL:-info}
+
+    # Optional error reporting — unset means no client, no network, nothing.
+    # A Splat project's "Copy External DSN" button gives you the value.
+    SENTRY_DSN: ${SENTRY_DSN:-}
+    SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-}
+
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "50m"
+      max-file: "3"
+
+services:
+  web:
+    <<: *kith
+    ports:
+      # Container :80 is Thruster. Bound to loopback by default — put Caddy or
+      # nginx in front and set HOST_IP if you need it on another interface.
+      - "${HOST_IP:-127.0.0.1}:3040:80"
+    healthcheck:
+      # /up is Rails' own check, and is excluded from the logs. The worker
+      # waits on it, because bin/docker-entrypoint runs db:prepare for the
+      # server and nothing else — the worker must not reach an empty database.
+      test: [ "CMD", "curl", "-fsS", "http://localhost/up" ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 30s
+
+  # Jobs do not run unless something is working the queue. A post reaches
+  # nobody's feed without this container: the fan-out is a job, and so is
+  # stripping the GPS coordinates out of every photograph that arrives.
+  #
+  # Deliberately a second container rather than SOLID_QUEUE_IN_PUMA, so that
+  # "is the worker running?" is a question `docker compose ps` answers.
+  worker:
+    <<: *kith
+    command: bin/jobs
+    depends_on:
+      web:
+        condition: service_healthy

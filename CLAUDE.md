@@ -400,6 +400,43 @@ bin/rails kith:allowance[email,10]
 bin/build              # build + push the image, and tag the release
 ```
 
+### Deploying
+
+`compose.yml` is the deployment: a web container and a worker container, one
+volume holding the four SQLite files and every photograph, and `.env` beside
+it. Copy both to the host — **not** into a checkout you develop in, or
+`./storage` is your development storage.
+
+Two variables are required, and the container refuses to start without either.
+`SECRET_KEY_BASE` is the obvious one. `KITH_HOST` is the address members reach
+this Kith at: every link in an email is built from it and it is the only `Host`
+header the app answers to, so a default would be a guess in both places —
+Rails' generated `example.com` produces a password reset that arrives, looks
+right and leads nowhere. One boot is exempt: `assets:precompile` runs in this
+environment inside the image build, before any host exists, and Rails marks it
+with `SECRET_KEY_BASE_DUMMY`.
+
+Kith sends exactly one email — the password reset — through `SMTP_*`. Leave
+them unset and that is the only thing that does not work; an invite is a link
+you hand over yourself. Each is read for its **presence**, because compose
+hands the container `SMTP_ADDRESS=` rather than nothing at all when `.env` is
+quiet, and `ENV.fetch` takes an empty string for an answer: a relay at `""` on
+port 0. The sender defaults to `kith@$KITH_HOST` rather than living in a second
+place; `KITH_MAIL_FROM` overrides it for a relay that insists on its own
+mailbox.
+
+TLS is terminated by the proxy in front, so `assume_ssl` and `force_ssl` are
+both on — without the first, Rails believes every request arrived unencrypted,
+cookies are set without `secure` and a form POST can 422 on the CSRF origin
+check. `/up` is excluded from the https redirect *and* from the host check,
+because the health check is the container asking itself over http, by a name no
+certificate covers.
+
+`ProductionTest` boots a real production process to assert all of it, the way
+`ErrorReportingTest` does. This is configuration the suite never otherwise
+loads, so every line of it can be wrong for months with a green suite behind
+it.
+
 ### Releases
 
 Two different things share the word *version*, and both have a name:

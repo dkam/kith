@@ -10,6 +10,11 @@
 # Ignore all environment files.
 /.env*
 
+# Except the example, which holds no secrets and is the only written record of
+# what a deployment needs. compose.yml opens with `cp .env.example .env`, and
+# production says "see .env.example" when it refuses to start without a host.
+!/.env.example
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*
