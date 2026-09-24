@@ -10,6 +10,16 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='actor[display_name]'][value=?]", "Alice Brennan"
   end
 
+  # Asked with the apps' user agent because that is the case this exists for:
+  # no masthead, so this page is the only way to either.
+  test "settings is the way to invites and to signing out" do
+    get settings_url, headers: native_headers
+
+    assert_select "header", false
+    assert_select "a[href=?]", invites_path
+    assert_select "form[action=?] input[name='_method'][value=delete]", session_path
+  end
+
   test "changing your display name" do
     patch settings_url, params: { actor: { display_name: "Alice B" } }
 

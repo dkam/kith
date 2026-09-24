@@ -1,0 +1,36 @@
+<%# NodeInfo 2.1. Everything here is about the instance; nothing is about a
+    member. %>
+{
+  "version": "2.1",
+
+  "software": {
+    "name": "kith",
+    "version": "<%= Kith::VERSION %>",
+    "repository": "https://github.com/dkam/kith"
+  },
+
+  <%# Empty, and honestly so. Kith's schema is built to federate and none of it
+      is wired up yet; a protocol claimed here is a promise to answer an inbox
+      that does not exist. This is the line that changes when it does. %>
+  "protocols": [],
+  "services": { "inbound": [], "outbound": [] },
+
+  <%# Invite-only, permanently. There is no signup page to point anybody at. %>
+  "openRegistrations": false,
+
+  <%# `usage` is missing on purpose. The schema asks for a member count; Kith's
+      rule is that counts are disclosures, and this one would be published to
+      anybody who asks, forever, for no reader that needs it. A wrong number
+      would be worse than an absent one — this is a machine document, and the
+      only thing worse than telling the open web how many friends are in here
+      is lying to it. If something real ever needs the figure, it goes here
+      and the reason goes in the changelog. %>
+
+  "metadata": {
+    "minimumNativeVersion": "<%= Kith::MINIMUM_NATIVE_VERSION %>",
+    "pathConfiguration": {
+      "ios": "<%= hotwire_configuration_path("ios_v1") %>",
+      "android": "<%= hotwire_configuration_path("android_v1") %>"
+    }
+  }
+}

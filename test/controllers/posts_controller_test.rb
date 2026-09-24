@@ -1,6 +1,61 @@
 require "test_helper"
 
 class PostsControllerTest < ActionDispatch::IntegrationTest
+  # The share sheet. The manifest points share_target at posts#new, so a phone
+  # sharing a link into Kith arrives here with three loose query params.
+  test "sharing a link into the composer prefills it" do
+    sign_in_as members(:alice)
+
+    get new_post_url, params: { title: "A good essay", text: "Worth reading", url: "https://example.com/essay" }
+
+    assert_response :success
+    assert_select "input[name=?][value=?]", "post[title]", "A good essay"
+    assert_includes response.body, "Worth reading"
+    assert_includes response.body, "https://example.com/essay"
+  end
+
+  # Android puts the link in `text` as often as in `url`, and frequently in
+  # both. Saying it twice is the bug that produces.
+  test "sharing does not repeat a url already in the text" do
+    sign_in_as members(:alice)
+
+    get new_post_url, params: { text: "Read this: https://example.com/essay", url: "https://example.com/essay" }
+
+    assert_response :success
+    assert_equal 1, response.body.scan("https://example.com/essay").length
+  end
+
+  # A share is text, wherever it came from. Nothing about arriving through the
+  # share sheet earns the right to choose the markup that gets stored.
+  test "a share cannot inject markup" do
+    sign_in_as members(:alice)
+
+    get new_post_url, params: { text: "<script>alert(1)</script>" }
+
+    assert_response :success
+    assert_not_includes response.body, "<script>alert(1)</script>"
+  end
+
+  test "the composer is empty without a share" do
+    sign_in_as members(:alice)
+
+    get new_post_url
+
+    assert_response :success
+    assert_select "input[name=?]", "post[title]" do |title|
+      assert title.first["value"].blank?
+    end
+  end
+
+  # Prefilling is not writing: a share opens the composer and stops there.
+  test "sharing writes nothing on its own" do
+    sign_in_as members(:alice)
+
+    assert_no_difference -> { Post.count } do
+      get new_post_url, params: { title: "A good essay", url: "https://example.com/essay" }
+    end
+  end
+
   test "writing a post" do
     sign_in_as members(:alice)
 
@@ -283,6 +338,25 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", "On keeping a notebook"
+  end
+
+  # Readable and findable are different grants. Alice is `connections_only`:
+  # her public post stays reachable to anyone holding the link, and out of the
+  # index. Erin asked for the web, so hers goes in.
+  test "a public permalink is indexed only when its author chose the web" do
+    get post_url(posts(:alice_public))
+    assert_select "meta[name=robots][content=?]", "noindex, nofollow"
+
+    erin = actors(:erin)
+    get post_url(erin.posts.create!(title: "In the open", audience: :public, body: "<p>Anyone.</p>", published_at: Time.current))
+    assert_select "meta[name=robots][content=?]", "index, follow"
+  end
+
+  test "a signed-in member never sees an indexable page, even a public one" do
+    sign_in_as members(:bob)
+    get post_url(posts(:alice_public))
+
+    assert_select "meta[name=robots][content=?]", "noindex, nofollow"
   end
 
   test "a post that does not exist gets the same 404 as one you may not see" do

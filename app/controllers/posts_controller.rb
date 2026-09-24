@@ -7,10 +7,18 @@ class PostsController < ApplicationController
   def show
     @comments = visibility.visible_comments(@post).includes(:actor)
     @comment = Comment.new(post: @post)
+
+    # Signed out, we are already only here because the post is public; whether
+    # it is also *findable* is the author's rung to decide.
+    allow_indexing_by @post.actor
   end
 
+  # Also where the share sheet lands: the manifest points share_target at this
+  # action, so "share to Kith" from another app opens the composer with the
+  # link already in it. It only ever prefills — nothing is written until the
+  # member presses the button, and the audience is theirs to pick as always.
   def new
-    @post = current_actor.posts.build
+    @post = current_actor.posts.build(shared_post_attributes)
   end
 
   def create
@@ -71,6 +79,20 @@ class PostsController < ApplicationController
 
     def require_permission_to_delete
       head :not_found unless authority.delete_post?(@post)
+    end
+
+    # A share arrives as three loose strings, and which of them holds what is up
+    # to the sending app: Android puts a link in `text` about as often as in
+    # `url`, and frequently in both. Treat them as text, not markup, and don't
+    # say the same URL twice.
+    def shared_post_attributes
+      title = params[:title].to_s.strip.truncate(Post::TITLE_LIMIT)
+      text  = params[:text].to_s.strip
+      url   = params[:url].to_s.strip
+
+      body = [ text, (url unless url.blank? || text.include?(url)) ].compact_blank.join("\n\n")
+
+      { title: title.presence, body: Post.paragraphs(body).presence }.compact
     end
 
     def post_params

@@ -2,6 +2,8 @@ class SettingsController < ApplicationController
   def show
     @actor = current_actor
     @member = current_member
+    @mcp_tokens = current_member.mcp_tokens.oldest_first
+    @new_mcp_token = McpToken.new
   end
 
   # One form, two records: who you are is on your actor, where you are is on
@@ -9,6 +11,8 @@ class SettingsController < ApplicationController
   def update
     @actor = current_actor
     @member = current_member
+    @mcp_tokens = current_member.mcp_tokens.oldest_first
+    @new_mcp_token = McpToken.new
 
     @actor.assign_attributes(actor_params)
     @member.assign_attributes(member_params)

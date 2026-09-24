@@ -37,7 +37,7 @@ class MemberTest < ActiveSupport::TestCase
     assert_match "already has a member", member.errors.full_messages.to_sentence
   end
 
-  test "create_first makes an inviterless member, discoverable by everyone" do
+  test "create_first makes an inviterless member, discoverable by every member" do
     Member.destroy_all
 
     member = Member.create_first(handle: "zoe", display_name: nil, email_address: "zoe@example.com",
@@ -46,7 +46,52 @@ class MemberTest < ActiveSupport::TestCase
     assert member.persisted?
     assert_nil member.inviter_member
     assert_equal "zoe", member.display_name, "a blank name falls back to the handle"
-    assert member.actor.everyone?
+    assert member.actor.members?
+  end
+
+  test "reset_password! sets a random password and returns it" do
+    alice = members(:alice)
+
+    password = Member.reset_password!("alice@example.com")
+
+    assert_equal 24, password.length
+    assert_equal alice, Member.authenticate_by(email_address: "alice@example.com", password: password)
+    assert_nil Member.authenticate_by(email_address: "alice@example.com", password: "password123")
+  end
+
+  test "reset_password! takes a password of your own" do
+    Member.reset_password!("alice@example.com", "a better password")
+
+    assert_equal members(:alice), Member.authenticate_by(email_address: "alice@example.com", password: "a better password")
+  end
+
+  test "reset_password! refuses a password the model would refuse" do
+    assert_raises ActiveRecord::RecordInvalid do
+      Member.reset_password!("alice@example.com", "short")
+    end
+
+    assert_equal members(:alice), Member.authenticate_by(email_address: "alice@example.com", password: "password123")
+  end
+
+  test "reset_password! signs the member out everywhere" do
+    alice = members(:alice)
+    alice.sessions.create!
+    bob_session = members(:bob).sessions.create!
+
+    alice.reset_password!
+
+    assert_empty alice.sessions.reload
+    assert Session.exists?(bob_session.id), "someone else's sessions are left alone"
+  end
+
+  test "reset_password! finds a member by handle, with or without the @" do
+    assert_equal members(:alice), Member.find_by_identifier!("@Alice")
+    assert_equal members(:alice), Member.find_by_identifier!(" alice ")
+    assert_equal members(:alice), Member.find_by_identifier!("ALICE@example.com")
+
+    assert_raises ActiveRecord::RecordNotFound do
+      Member.reset_password!("nobody@example.com")
+    end
   end
 
   # --- Roles ----------------------------------------------------------------

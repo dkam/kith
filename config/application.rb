@@ -1,4 +1,8 @@
 require_relative "boot"
+# Loaded here rather than as an initializer so Kith::VERSION exists before
+# config/initializers/* run — initializers load alphabetically, so "version"
+# would otherwise arrive too late for half of them.
+require_relative "version"
 
 require "rails/all"
 

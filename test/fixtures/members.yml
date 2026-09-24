@@ -41,3 +41,9 @@ ada:
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: alice
   role: admin
+
+erin:
+  actor: erin
+  email_address: erin@example.com
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  inviter_member: alice

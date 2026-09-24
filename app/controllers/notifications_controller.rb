@@ -24,7 +24,9 @@ class NotificationsController < ApplicationController
   def read_all
     current_member.notifications.unread.update_all(read_at: Time.current, updated_at: Time.current)
 
-    redirect_to notifications_path, notice: "All marked as read."
+    # See FeedItemsController#read_all: refreshing the screen the app is on,
+    # rather than pushing another copy of it.
+    refresh_or_redirect_to notifications_path, notice: "All marked as read."
   end
 
   private

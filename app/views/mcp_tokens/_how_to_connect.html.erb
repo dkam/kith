@@ -1,0 +1,29 @@
+<%# Three clients, with this endpoint's own URL already in them. Folded away
+    because most of the time a member wants the URL and nothing else. %>
+<details class="mt-3 font-sans text-sm">
+  <summary class="cursor-pointer text-quiet hover:text-ink">How to connect</summary>
+
+  <div class="mt-3 space-y-4 border-l border-rule pl-4">
+    <div>
+      <p class="text-ink">Claude Code</p>
+      <pre class="mt-1.5 whitespace-pre-wrap break-words rounded-sm bg-sunken p-3 font-mono text-xs text-quiet"><%=
+        "claude mcp add --transport http #{mcp_server_name(mcp_token)} \"#{mcp_url(token: mcp_token.token)}\"" %></pre>
+    </div>
+
+    <div>
+      <p class="text-ink">opencode</p>
+      <p class="mt-1 text-quiet">In <span class="font-mono text-xs">opencode.json</span>:</p>
+      <pre class="mt-1.5 overflow-x-auto rounded-sm bg-sunken p-3 font-mono text-xs text-quiet"><%=
+        opencode_mcp_config(mcp_token) %></pre>
+    </div>
+
+    <div>
+      <p class="text-ink">Claude Desktop, and the phone apps</p>
+      <p class="mt-1 text-quiet">
+        Settings, then Connectors, then add a custom connector and paste the
+        endpoint. These only reach Kith over a public address with HTTPS — an
+        assistant on your phone can't open something running on your laptop.
+      </p>
+    </div>
+  </div>
+</details>

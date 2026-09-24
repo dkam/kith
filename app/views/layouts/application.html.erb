@@ -1,36 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title><%= content_for(:title) ? "#{content_for(:title)} · Kith" : "Kith" %></title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Kith">
-    <meta name="mobile-web-app-capable" content="yes">
-    <%# Private by default: never let a post or a photo end up in a search index. %>
-    <meta name="robots" content="noindex, nofollow">
-    <%= csrf_meta_tags %>
-    <%= csp_meta_tag %>
-
-    <%= yield :head %>
-
-    <%# Literata reads what a member wrote; Barlow does everything they operated. %>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&family=Barlow:wght@400;500;600&display=swap">
-
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
-
-    <%= stylesheet_link_tag "lexxy", "data-turbo-track": "reload" %>
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
-    <%= javascript_importmap_tags %>
+    <%= render "layouts/head" %>
+    <%= render "layouts/pwa" %>
   </head>
 
   <body class="min-h-screen bg-paper text-ink antialiased">
     <%= render "shared/masthead" if authenticated? %>
 
-    <main class="mx-auto w-full max-w-2xl px-5 py-10">
+    <main class="mx-auto w-full max-w-2xl px-5 pt-10 pb-safe">
       <%= render "shared/flash" %>
       <%= yield %>
     </main>

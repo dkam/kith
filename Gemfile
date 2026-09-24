@@ -51,6 +51,9 @@ gem "lexxy", "~> 0.9.32"
 # Optional error reporting. Inert unless SENTRY_DSN is set — see ErrorReport,
 # which decides what is allowed to leave the instance in a crash report.
 gem "sentry-rails"
+# The official Ruby MCP SDK, for the per-member endpoint an agent connects to
+# [https://github.com/modelcontextprotocol/ruby-sdk]
+gem "mcp", "~> 1.5"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem

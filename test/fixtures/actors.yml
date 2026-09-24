@@ -8,7 +8,7 @@ bob:
   type: LocalActor
   handle: bob
   display_name: Bob Ndlovu
-  discoverable: everyone
+  discoverable: members
 
 carol:
   type: LocalActor
@@ -26,10 +26,15 @@ mo:
   type: LocalActor
   handle: mo
   display_name: Mo Sandoval
-  discoverable: everyone
+  discoverable: members
 
 ada:
   type: LocalActor
   handle: ada
   display_name: Ada Whitlock
-  discoverable: everyone
+  discoverable: members
+erin:
+  type: LocalActor
+  handle: erin
+  display_name: Erin Vasquez
+  discoverable: internet

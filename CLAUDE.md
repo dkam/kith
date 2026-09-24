@@ -38,6 +38,8 @@ Beyond the Rails defaults, only:
 - `image_processing` — Active Storage variants, EXIF stripping.
 - `lexxy` — the Action Text editor (approved 2026-09-16, replacing
   `commonmarker` and Markdown storage).
+- `mcp` — the official Ruby MCP SDK, behind each member's read-only agent
+  endpoint (approved 2026-09-18).
 - `json` pinned to `~> 2.7` — Ruby 4.0 ships json 3.x as a default gem, and its
   `JSON.parse` arity change breaks `ActiveSupport::JSON.decode`, which every
   signed cookie goes through. Remove the pin when Rails supports json 3.
@@ -98,14 +100,31 @@ These are design decisions, not suggestions.
   and nothing else has to know.
 - **Comments are flat.** No threading. Visible to the post's audience. A
   commenter's name is always shown; their profile link is rendered only if the
-  viewer is connected to them **or** they are `discoverable: everyone`.
+  viewer is connected to them **or** they are discoverable by `members` or
+  `internet`.
 - **Notifications pass the identical visibility check as the feed.** They are
   the classic side channel for leaks — route them through `Visibility` like
   everything else.
 - **Nothing is soft-deleted.** Deleting a post deletes its media.
-- **Member discoverability** is three-state: `everyone` / `connections_only` /
-  `invisible`. An invisible member's comments are shown only to their
-  connections.
+- **Member discoverability is one ladder of four rungs**, widest first:
+  `internet` / `members` / `connections_only` / `invisible`, defaulting to
+  `connections_only`. An invisible member's comments are shown only to their
+  connections. There is deliberately **no second "profile visibility"
+  setting**: who can find me and who can read my profile page are the same
+  question asked at different distances, and two columns would mean two rules
+  to keep in step with a truth table full of holes between them.
+- **`internet` is the only rung the open web can see.** A signed-out visitor
+  gets a profile page for an `internet` actor and a 404 for every other one —
+  the same 404 a handle nobody has ever used returns. That page is a separate
+  template (`profiles/anonymous`), not conditionals inside the members' one:
+  avatar, name, handle, public posts, and nothing of the follow graph.
+- **Readable and findable are different grants.** A public post's permalink is
+  anonymously readable whatever its author's rung; it is *indexed* only when
+  the author is on `internet`. The layout is `noindex, nofollow` everywhere
+  else — see `ApplicationController#allow_indexing_by`, which both public
+  surfaces ask, and which requires a signed-out viewer as well as the rung.
+- **Opting onto the web is a one-way door**, so it is never the default. Once
+  crawled, unpublishing is theatre.
 
 ---
 
@@ -140,13 +159,26 @@ Integer primary keys. Don't reach for UUIDs.
 - **`instances`** — one row, always (`Instance.current`): `invites_open`,
   `member_cap`. This Kith's own settings. The instance's name, description and
   its own actor will live here when federation needs them.
+- **`mcp_tokens`** — `member_id`, `token`, `name`, `access` enum, `last_used_at`.
+  The credential behind one of a member's MCP endpoints. A member holds as many
+  as they like, named, because a reader on the phone and something that writes
+  on the desktop are not the same grant. `access` is `read_only` or
+  `read_write`, integer-backed and sparse so narrower grants fit between them,
+  and it is **fixed at issue** — a token handed out as read-only never quietly
+  becomes able to write. To change it, revoke and reissue.
 
 ### Deviations from the original brief, and why
 
-- `actors.discoverable` holds the three-state enum. The brief listed the column
-  on `actors` but described its values under "Member"; actors is the right home
-  because remote actors need discoverability too, and a member's identity *is*
-  its actor.
+- `actors.discoverable` holds the enum. The brief listed the column on `actors`
+  but described its values under "Member"; actors is the right home because
+  remote actors need discoverability too, and a member's identity *is* its
+  actor.
+- `everyone` was renamed `members`, and `internet` added above it. The value
+  had always meant "every member of this instance and nobody beyond it", which
+  reads correctly only while there is nothing beyond the instance. With a rung
+  above it, "everyone" is a word that means "not everyone" — and it is the rung
+  people misread in the direction that hurts. The integer is still 0; the
+  rename was code only.
 - `notifications.kind` was added. `new_follower` and `follow_accepted` both
   point at a `Follow` subject and are otherwise indistinguishable.
 - `posts.body`/`body_html` are gone. The brief assumed Markdown in, HTML out;
@@ -228,14 +260,26 @@ Integer primary keys. Don't reach for UUIDs.
 A single policy object, `Visibility`, answers:
 
 - can actor X see post P?
-- can actor X see actor Y's profile link?
+- can actor X see actor Y's profile link, or open their profile page?
 - can actor X see comment C?
+
+X may be **nil**. A signed-out visitor is not an error case to bounce at the
+door; it is a viewer with less, and `Visibility` answers for it like any other.
+`post?` says yes to a public post, `profile?` and `profile_link?` say yes only
+on the `internet` rung, everything else is no. Media, notifications and the MCP
+endpoint inherit that for free, because they were already routed through here.
 
 It answers in two shapes — a predicate for one record (`post?`, `comment?`) and
 a scope for many (`visible_posts`, `visible_comments`). The tests assert the two
 can never diverge, by cross-checking every actor against every post and comment
 in the fixture graph. That pair drifting apart is how a feed and a permalink
 come to hold different opinions about the same post.
+
+The same cross-check binds `profile_link?` to `profile?`: **nobody is ever
+shown a link to a page they would be 404ed from.** A link that leads to a 404
+is itself the disclosure — the link says the thing exists and the page denies
+it — and the two methods are edited separately, which is exactly how they
+drift.
 
 **Every** feed, comment, notification, media and permalink query goes through
 it. There is no second path. Cover it thoroughly with tests — this is the
@@ -290,6 +334,16 @@ Two habits that fall out of it:
   "does not exist" return the *same* status.
 - **Counts are disclosures too.** A reply count, an unread badge: derive them
   from the visible set, not from the table.
+- **`Cache-Control: public` only where there is no session.** The same URL
+  renders a different body to a member — a follow button, their followers-only
+  posts — and a shared cache knows nothing about anybody's session. Set it on
+  the signed-out branch, never on a page rendered under a session.
+
+A seam left for later: when federation lands, the ActivityPub actor document is
+content-negotiated at the profile's own URL and must resolve for **every** local
+actor, whatever their rung. That is a machine document, not a profile page;
+`discoverable` must not gate it, or remote follow requests cannot address an
+invisible member. Don't build it now.
 
 ---
 
@@ -398,6 +452,9 @@ bin/rails kith:door[closed] # open | closed
 bin/rails kith:member_cap[40]          # pass nothing to lift it
 bin/rails kith:allowance[email,10]
 bin/build              # build + push the image, and tag the release
+
+# forgotten password — from bin/rails console, or bin/rails runner
+Member.reset_password!("alice@example.com")   # => the new password; also signs them out
 ```
 
 ### Deploying
@@ -439,24 +496,42 @@ it.
 
 ### Releases
 
-Two different things share the word *version*, and both have a name:
+Several different things share the word *version*, and each has a name:
 
 - **version** — which release this is. Hand-set SemVer in `config/version.rb`,
-  survives a rebuild of identical code, goes in `CHANGELOG.md`, gets said out
-  loud.
+  survives a rebuild of identical code, names the image tag, goes in
+  `CHANGELOG.md`, gets said out loud.
 - **revision** — which commit the running container was built from. The
   Dockerfile writes it into a `VERSION` file from `ARG GIT_SHA`;
   `config/initializers/revision.rb` reads it at boot into
   `config.x.revision`, falling back to `git rev-parse` in **development only**
-  — a deployed container has no business shelling out on boot. Both are shown
+  — a deployed container has no business shelling out on boot. It is the only
+  thing that answers "is what I just built actually running?" Both are shown
   at the foot of the settings page.
+- **`McpServer::VERSION`** — the protocol surface's own version, which moves
+  when the tools do, because it has clients on the other end of it.
+- **`Kith::MINIMUM_NATIVE_VERSION`** — the oldest phone app this instance will
+  talk to, published in its NodeInfo.
 
-**Bumping `Kith::VERSION` on `main` is the release.** Everything else follows
-from it: `bin/build` reads the constant without booting Rails, pushes
-`:vX.Y.Z`, `:<sha>` and `:latest`, and then creates the git tag in the same run
-— *after* a successful push, because a tag for an image that does not exist is
-a lie. A pre-release (any version containing a hyphen, e.g. `0.2.0-dev`)
-publishes its own image tag, does not move `:latest`, and earns no git tag.
+**Bumping `Kith::VERSION` on `main` is the release.** `main` lives on two
+forges, and each has a pipeline that carries the release out:
+
+- **`bin/build` → `git.booko.info/dkam/kith`.** This is the image `compose.yml`
+  deploys, and it is run by hand. It reads the constant without booting Rails,
+  pushes `:vX.Y.Z`, `:<sha>` and `:latest`, and then creates the git tag and
+  pushes it to Gitea in the same run — *after* a successful push, because a tag
+  for an image that does not exist is a lie. amd64 only, because that is what
+  Kith is deployed to.
+- **`.github/workflows/build.yml` → `ghcr.io/dkam/kith`.** It runs by itself
+  when a change to `config/version.rb` reaches `main` on GitHub: amd64 and arm64
+  built natively and stitched into one manifest, tagged `:vX.Y.Z` and `:X.Y.Z`,
+  and — for a non-pre-release — `:latest`, the git tag and a GitHub Release.
+
+So a release is: bump the constant, push `main` to both remotes, and run
+`bin/build`. The deployment does not move until the last step. Both pipelines
+tag the same commit with the same name, so the two forges agree about what
+`vX.Y.Z` is. A pre-release (any version containing a hyphen, e.g. `0.2.0-dev`)
+publishes its own image tag on both, moves no `:latest`, and earns no git tag.
 
 Tagging is not a separate step a human is trusted to remember, because they
 don't: splat's `config/version.rb` once read 1.14.0 while its newest git tag
@@ -481,6 +556,13 @@ was v1.7.8 — eight releases with no commit you could check out.
 6. Flat comments with the gated profile-link rule.
 7. Notifications: new follower, follow accepted, new comment on your post.
 8. `MediaController` as specified.
+9. MCP endpoints, added 2026-09-18 after the original eight. A member makes as
+   many as they want from settings, each named and each either read-only or
+   read-and-write, with copy, reset and revoke, and per-client instructions for
+   Claude Code, opencode and Claude Desktop. The tools are `whoami`, `feed`,
+   `post`, `notifications`, and — only on a read-and-write endpoint —
+   `write_post`, `comment` and `mark_read`. A read-only endpoint is never told
+   the writing tools exist; `McpServer.tools_for` decides once, from the grant.
 
 **Not in phase 1**: federation, ActivityPub, RSS ingest, circles, likes,
 passkeys, search, DMs.
@@ -516,6 +598,16 @@ passkeys, search, DMs.
   editor is showing them. `drop_photos` in the system tests waits for the
   `/media/pending/` URL, which is the first thing that proves the upload is
   done.
+- **The MCP token is in the query string on purpose.** It is the only place a
+  credential can ride that every MCP client accepts — the phone apps take a URL
+  and nothing else — and `token` is already in `config.filter_parameters`, so
+  the request line and the parameters come out `[FILTERED]`. What filtering
+  does *not* cover is the SQL echo in development, which is why
+  `McpController#authenticate_token` silences the logger around the lookup.
+- **An agent hands us text, never markup.** `write_post` takes plain text and
+  makes the paragraphs itself, escaping as it goes. Kith stores HTML because
+  the editor produces HTML; nothing is gained by letting a JSON-RPC caller
+  choose the markup that gets stored.
 - **Lexxy's stylesheet is unlayered, and unlayered CSS beats every cascade
   layer** however specific the layered selector is. Overrides for it therefore
   sit outside `@layer components` in `app/assets/tailwind/application.css`;

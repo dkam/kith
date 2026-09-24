@@ -11,9 +11,10 @@ require "test_helper"
 #   carol  -> dave       rejected
 #
 #   alice   discoverable: connections_only
-#   bob     discoverable: everyone
+#   bob     discoverable: members
 #   carol   discoverable: invisible
 #   dave    discoverable: connections_only
+#   erin    discoverable: internet — follows nobody, is followed by nobody
 class VisibilityTest < ActiveSupport::TestCase
   # --- Posts ---------------------------------------------------------------
 
@@ -156,7 +157,7 @@ class VisibilityTest < ActiveSupport::TestCase
     assert as(:carol).profile_link?(actors(:carol))
   end
 
-  test "a discoverable-by-everyone member is always linked" do
+  test "a member discoverable by every member is always linked" do
     assert as(:dave).profile_link?(actors(:bob))
     assert as(:carol).profile_link?(actors(:bob))
   end
@@ -186,9 +187,17 @@ class VisibilityTest < ActiveSupport::TestCase
     assert Visibility.new(actors(:alice).reload).profile_link?(actors(:carol))
   end
 
-  test "a signed-out visitor gets no profile links at all, not even to the discoverable" do
+  test "a signed-out visitor gets a profile link only to someone who chose the web" do
+    assert signed_out.profile_link?(actors(:erin))
+
     refute signed_out.profile_link?(actors(:bob))
     refute signed_out.profile_link?(actors(:alice))
+    refute signed_out.profile_link?(actors(:carol))
+  end
+
+  test "an internet member is linked to every member too, like a discoverable one" do
+    assert as(:carol).profile_link?(actors(:erin))
+    assert as(:dave).profile_link?(actors(:erin))
   end
 
   test "a nil actor is never linked" do
@@ -207,8 +216,30 @@ class VisibilityTest < ActiveSupport::TestCase
     assert as(:carol).profile?(actors(:carol))
   end
 
-  test "signed-out visitors have no profile pages" do
+  test "signed-out visitors have no profile pages, except the ones opted onto the web" do
+    assert signed_out.profile?(actors(:erin))
+
     refute signed_out.profile?(actors(:bob))
+    refute signed_out.profile?(actors(:alice))
+    refute signed_out.profile?(actors(:carol))
+  end
+
+  # --- profile? and profile_link? must agree, always ------------------------
+
+  # A link to a page the same viewer would be 404ed from is a disclosure: the
+  # link says the page is there, the page says it is not. These two are edited
+  # separately and drift the way the feed and the permalink would.
+  test "nobody is ever shown a link to a profile they may not open" do
+    ([ nil ] + Actor.all.to_a).each do |viewer|
+      policy = Visibility.new(viewer)
+
+      Actor.find_each do |actor|
+        next unless policy.profile_link?(actor)
+
+        assert policy.profile?(actor),
+          "#{viewer&.handle || "a signed-out visitor"} is offered a link to @#{actor.handle}'s profile but may not open it"
+      end
+    end
   end
 
   # --- Comments ------------------------------------------------------------

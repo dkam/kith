@@ -1,0 +1,105 @@
+<%# Hotwire Native reads rules in order and lets a later one override an
+    earlier one, so this reads top to bottom from "everything" down to the
+    handful of screens that are not just another page in the stack.
+
+    Keep the patterns identical to android_v1.json.erb. Only the properties
+    differ between the platforms, and a test asserts the patterns do not. %>
+{
+  "settings": {
+    "screenshots_enabled": true
+  },
+
+  "rules": [
+    <%# Everything. Unanchored, so it matches every path; the rules below it
+        are the exceptions. %>
+    {
+      "patterns": [".*"],
+      "properties": {
+        "context": "default",
+        "presentation": "default",
+        "pull_to_refresh_enabled": true
+      }
+    },
+
+    <%# Every redirect to root in Kith means "you are finished, go home" —
+        deleting a post, marking everything read, signing in. Without this,
+        deleting a post from its permalink pushes a second feed on top of the
+        one you arrived from and the back gesture walks you through your own
+        history. %>
+    {
+      "patterns": ["^/$"],
+      "properties": {
+        "presentation": "clear_all"
+      }
+    },
+
+    <%# The composer. `create` redirects to the post, which is a default
+        context, so the modal dismisses itself and the permalink pushes — no
+        controller anywhere has to know an app is asking.
+
+        Pull-to-refresh off is not cosmetic. The body is a contenteditable,
+        and a downward drag inside one that reloads the page throws away a
+        draft without a word. %>
+    {
+      "patterns": ["/posts/new$", "/posts/[^/]+/edit$"],
+      "properties": {
+        "context": "modal",
+        "modal_style": "large",
+        "pull_to_refresh_enabled": false
+      }
+    },
+
+    <%# Errands, not reading. %>
+    {
+      "patterns": ["/settings", "/invites$"],
+      "properties": {
+        "context": "modal",
+        "modal_style": "large",
+        "pull_to_refresh_enabled": false
+      }
+    },
+
+    <%# A photograph in a post links to its full-size variant with
+        target="_blank". Left to the system browser that opens in Safari,
+        which has its own cookie jar and therefore no session — so a member
+        tapping a friend's photo would get the same 404 a stranger gets. This
+        keeps it inside the app. %>
+    {
+      "patterns": ["/media/"],
+      "properties": {
+        "context": "modal",
+        "modal_style": "full",
+        "pull_to_refresh_enabled": false
+      }
+    },
+
+    <%# Signing in replaces whatever it was reached from rather than stacking
+        on top of it. Two reasons, and the second is the important one: a
+        wrong password redirects back to this same page, so without `replace`
+        you collect a sign-in screen per attempt; and after signing out, a
+        back swipe must not return to the feed of whoever was just using this
+        phone. %>
+    {
+      "patterns": ["/session/new$", "/passwords", "/join/", "/setup$"],
+      "properties": {
+        "presentation": "replace",
+        "pull_to_refresh_enabled": false
+      }
+    },
+
+    <%# turbo-rails' three native responses. Declared rather than assumed to
+        be defaults; harmless if they already are. %>
+    {
+      "patterns": ["/recede_historical_location"],
+      "properties": { "presentation": "pop" }
+    },
+    {
+      "patterns": ["/resume_historical_location"],
+      "properties": { "presentation": "none" }
+    },
+    {
+      "patterns": ["/refresh_historical_location"],
+      "properties": { "presentation": "refresh" }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+alice_reader:
+  member: alice
+  token: alicesmcptokenvalue00001
+  name: Alice's laptop
+  access: read_only
+
+alice_writer:
+  member: alice
+  token: alicesmcpwritetoken00002
+  name: Alice's desktop
+  access: read_write
+
+bob:
+  member: bob
+  token: bobsmcptokenvalue00000003
+  name: Bob's phone
+  access: read_only

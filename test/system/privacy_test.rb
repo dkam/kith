@@ -39,7 +39,7 @@ class PrivacyTest < ApplicationSystemTestCase
     visit post_path(posts(:alice_public))
 
     within("li", text: "A comment on a public post") do
-      # Bob is discoverable by everyone, so his name links.
+      # Bob is discoverable by every member, so his name links.
       assert_selector "a", text: "Bob Ndlovu"
     end
 

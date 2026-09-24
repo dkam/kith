@@ -1,0 +1,108 @@
+<%# The same rules as ios_v1.json.erb, and the patterns must stay identical —
+    a test asserts it. What differs is how a screen is named: iOS picks a
+    presentation style, Android names a registered fragment by URI.
+
+    The `uri` values have to match what KithApplication.kt registers with
+    @HotwireDestinationDeepLink. That is the one place Ruby and Kotlin have to
+    agree literally, and nothing but a running app will tell you they don't. %>
+{
+  "settings": {
+    "screenshots_enabled": true
+  },
+
+  "rules": [
+    <%# Everything. Unanchored, so it matches every path; the rules below it
+        are the exceptions. %>
+    {
+      "patterns": [".*"],
+      "properties": {
+        "context": "default",
+        "presentation": "default",
+        "uri": "hotwire://fragment/web",
+        "pull_to_refresh_enabled": true
+      }
+    },
+
+    <%# Every redirect to root in Kith means "you are finished, go home" —
+        deleting a post, marking everything read, signing in. Without this,
+        deleting a post from its permalink pushes a second feed on top of the
+        one you arrived from and the back button walks you through your own
+        history. %>
+    {
+      "patterns": ["^/$"],
+      "properties": {
+        "presentation": "clear_all"
+      }
+    },
+
+    <%# The composer. `create` redirects to the post, which is a default
+        context, so the sheet dismisses itself and the permalink pushes — no
+        controller anywhere has to know an app is asking.
+
+        Pull-to-refresh off is not cosmetic. The body is a contenteditable,
+        and a downward drag inside one that reloads the page throws away a
+        draft without a word. %>
+    {
+      "patterns": ["/posts/new$", "/posts/[^/]+/edit$"],
+      "properties": {
+        "context": "modal",
+        "uri": "hotwire://fragment/web/modal/sheet",
+        "pull_to_refresh_enabled": false
+      }
+    },
+
+    <%# Errands, not reading. %>
+    {
+      "patterns": ["/settings", "/invites$"],
+      "properties": {
+        "context": "modal",
+        "uri": "hotwire://fragment/web/modal/sheet",
+        "pull_to_refresh_enabled": false
+      }
+    },
+
+    <%# A photograph in a post links to its full-size variant with
+        target="_blank". Left to the system browser it opens in Chrome, which
+        has its own cookie jar and therefore no session — so a member tapping
+        a friend's photo would get the same 404 a stranger gets. This keeps it
+        inside the app. %>
+    {
+      "patterns": ["/media/"],
+      "properties": {
+        "context": "modal",
+        "uri": "hotwire://fragment/web/modal/sheet",
+        "pull_to_refresh_enabled": false
+      }
+    },
+
+    <%# Signing in replaces whatever it was reached from rather than stacking
+        on top of it. Two reasons, and the second is the important one: a
+        wrong password redirects back to this same page, so without `replace`
+        you collect a sign-in screen per attempt; and after signing out, the
+        back button must not return to the feed of whoever was just using this
+        phone. %>
+    {
+      "patterns": ["/session/new$", "/passwords", "/join/", "/setup$"],
+      "properties": {
+        "presentation": "replace",
+        "uri": "hotwire://fragment/web",
+        "pull_to_refresh_enabled": false
+      }
+    },
+
+    <%# turbo-rails' three native responses. Declared rather than assumed to
+        be defaults; harmless if they already are. %>
+    {
+      "patterns": ["/recede_historical_location"],
+      "properties": { "presentation": "pop", "uri": "hotwire://fragment/web" }
+    },
+    {
+      "patterns": ["/resume_historical_location"],
+      "properties": { "presentation": "none", "uri": "hotwire://fragment/web" }
+    },
+    {
+      "patterns": ["/refresh_historical_location"],
+      "properties": { "presentation": "refresh", "uri": "hotwire://fragment/web" }
+    }
+  ]
+}

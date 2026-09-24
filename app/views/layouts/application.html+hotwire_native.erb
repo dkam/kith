@@ -1,0 +1,26 @@
+<%# The same Kith, with the web's furniture taken off.
+
+    No masthead: the shell draws the navigation, and a second row of links
+    under a native one is how an app announces it is a website in a coat.
+
+    No safe-area padding either. `pt-safe` leaves with the masthead, and the
+    bottom inset is already paid by the container the shell puts this web view
+    in — `pb-safe` here would pay it twice and leave a gap under every screen.
+    `pb-10` is what `pb-safe` resolves to off a phone, which is the spacing the
+    reading column was designed with.
+
+    Nothing else differs. If a screen ever needs more than this, that is a
+    signal the web version of it is wrong. %>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%= render "layouts/head" %>
+  </head>
+
+  <body class="min-h-screen bg-paper text-ink antialiased">
+    <main class="mx-auto w-full max-w-2xl px-5 pt-10 pb-10">
+      <%= render "shared/flash" %>
+      <%= yield %>
+    </main>
+  </body>
+</html>

@@ -8,7 +8,13 @@
 # only in development, because shelling out on boot is not something a deployed
 # container should do, and it has a VERSION file anyway.
 #
-# See config/version.rb for why this is a separate thing from Kith::VERSION.
+# This is deliberately a different thing from Kith::VERSION (config/version.rb):
+#
+#   version   which release is this? Survives a rebuild of the same code, and is
+#             what the image tag is named after.
+#   revision  which commit is this? Precise, automatic, meaningless to read, and
+#             the only thing that answers "is what I just built actually
+#             running?"
 Rails.application.config.x.revision = begin
   version_file = Rails.root.join("VERSION")
   from_file = version_file.exist? ? version_file.read.strip.presence : nil

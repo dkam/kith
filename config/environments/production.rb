@@ -44,6 +44,13 @@ Rails.application.configure do
   config.assume_ssl = true
 
   # Strict-Transport-Security, secure cookies, and http redirected to https.
+  #
+  # The secure cookies matter most. A member's session cookie is set
+  # `permanent` — twenty years — and it now lives on a phone rather than on a
+  # laptop that goes in a drawer. Without `Secure` it is sent over any network
+  # that can persuade the phone to make one cleartext request. It is also a hard
+  # requirement of the phone apps: App Transport Security will not load a
+  # cleartext origin at all.
   config.force_ssl = true
 
   # Except for the health check, which is the container asking itself over

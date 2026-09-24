@@ -15,7 +15,12 @@ Rails.application.routes.draw do
 
   resources :invites, only: %i[ index create destroy ]
 
-  resource :settings, only: %i[ show update ], controller: "settings"
+  resource :settings, only: %i[ show update ], controller: "settings" do
+    # A member's agent endpoints. `update` is the reset button: the old token
+    # stops working the moment it returns, which is the point of it.
+    resources :mcp_tokens, only: %i[ create update destroy ]
+  end
+
   delete "settings/avatar", to: "settings#destroy_avatar", as: :settings_avatar
 
   resources :posts, except: :index do
@@ -56,6 +61,38 @@ Rails.application.routes.draw do
 
   # Profiles read as handles: /@alice
   get "@:handle", to: "profiles#show", as: :profile, constraints: { handle: /[A-Za-z0-9_]{2,32}/ }
+
+  # One member's agent endpoint. The token rides in the query string because
+  # that is the only place every MCP client can carry it — `?token=` is also
+  # what Rails already filters out of the logs — with an Authorization: Bearer
+  # header accepted for clients that can send one. GET is the stream a
+  # streamable-HTTP client may ask for; Kith has nothing to say unprompted.
+  post "mcp", to: "mcp#create", as: :mcp
+  get  "mcp", to: "mcp#show"
+
+  # The installable app. Both are rendered from app/views/pwa so the manifest
+  # is built from the same tokens the stylesheet is, and both answer signed
+  # out: a phone fetches them before anybody has signed in.
+  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+
+  # Every Kith is somebody else's, so a phone app has to be told which one it
+  # is talking to — and then has to check. NodeInfo is the answer the rest of
+  # the fediverse already gives to that question, which makes this a federation
+  # seam rather than a phone one: whatever else learns to read Kith later will
+  # look here first.
+  get ".well-known/nodeinfo", to: "node_info#index", as: :nodeinfo_index, defaults: { format: :json }
+  get "nodeinfo/2.1", to: "node_info#show", as: :nodeinfo, defaults: { format: :json }
+
+  # The phone apps' navigation rules. The shells fetch these at launch, so
+  # which screen is a modal and which pushes can change without a new build.
+  #
+  # The version is in the name because a build that has shipped keeps asking
+  # for the shape it was written against: ios_v1 may gain rules, but it may
+  # never change what one of them means. When it needs to, that is ios_v2 and
+  # a new build. See app/views/configurations.
+  get "configurations/:name", to: "configurations#show", as: :hotwire_configuration,
+    constraints: { name: /(ios|android)_v1/ }, defaults: { format: :json }
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check

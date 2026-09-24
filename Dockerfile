@@ -49,8 +49,11 @@ COPY . .
 
 # The commit this image was built from, read at boot by
 # config/initializers/revision.rb so a running container can say which revision
-# it is. Declared here rather than at the top of the file on purpose: an ARG is
-# only in scope for the stage that declares it — put it before the FROM and the
+# it is. .dockerignore excludes /.git/, so the app cannot ask git at runtime:
+# this file is what tells you whether what you just built is running.
+#
+# Declared here rather than at the top of the file on purpose: an ARG is only
+# in scope for the stage that declares it — put it before the FROM and the
 # --build-arg is silently ignored, which is the failure mode where every deploy
 # reports "unknown" and nobody notices for a month.
 ARG GIT_SHA=unknown
