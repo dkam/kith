@@ -516,9 +516,9 @@ Several different things share the word *version*, and each has a name:
 **Bumping `Kith::VERSION` on `main` is the release.** `main` lives on two
 forges, and each has a pipeline that carries the release out:
 
-- **`bin/build` → `git.booko.info/dkam/kith`.** This is the image `compose.yml`
-  deploys, and it is run by hand. It reads the constant without booting Rails,
-  pushes `:vX.Y.Z`, `:<sha>` and `:latest`, and then creates the git tag and
+- **`bin/build` → `git.booko.info/dkam/kith`.** Run by hand, and the package
+  is **private**. It reads the constant without booting Rails, pushes
+  `:vX.Y.Z`, `:<sha>` and `:latest`, and then creates the git tag and
   pushes it to Gitea in the same run — *after* a successful push, because a tag
   for an image that does not exist is a lie. amd64 only, because that is what
   Kith is deployed to.
@@ -527,8 +527,17 @@ forges, and each has a pipeline that carries the release out:
   built natively and stitched into one manifest, tagged `:vX.Y.Z` and `:X.Y.Z`,
   and — for a non-pre-release — `:latest`, the git tag and a GitHub Release.
 
-So a release is: bump the constant, push `main` to both remotes, and run
-`bin/build`. The deployment does not move until the last step. Both pipelines
+  **This is the image `compose.yml` deploys**, because this package is *public*:
+  a host pulls it with no `docker login`, no token on disk and nothing to
+  rotate. The Gitea package is private, and a host that was never logged in
+  fails the pull with *"repository does not exist or may require
+  authorization"* — which reads like a build that never happened rather than a
+  credential that was never supplied.
+
+So a release is: bump the constant and push `main` to both remotes. GitHub
+builds and moves `:latest`, and the deployment follows on the next
+`docker compose up -d` — `bin/build` is the Gitea mirror, not the thing that
+ships. Pin `image:` to `:vX.Y.Z` if a host should hold still. Both pipelines
 tag the same commit with the same name, so the two forges agree about what
 `vX.Y.Z` is. A pre-release (any version containing a hyphen, e.g. `0.2.0-dev`)
 publishes its own image tag on both, moves no `:latest`, and earns no git tag.

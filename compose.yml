@@ -37,7 +37,14 @@
 # refuses to start rather than guess.
 
 x-kith: &kith
-  image: git.booko.info/dkam/kith:latest
+  # GitHub's registry, not git.booko.info's. Both are published — bin/build
+  # pushes to Gitea by hand, .github/workflows/build.yml pushes here on every
+  # version bump — but this package is *public*, so a host can pull it with no
+  # `docker login` and no token to rotate. The Gitea package is private, and a
+  # deploy host that was never logged in fails with "repository does not exist
+  # or may require authorization", which reads like a build that never
+  # happened.
+  image: ghcr.io/dkam/kith:latest
   pull_policy: always   # :latest moves on each release — re-pull on `up -d`
   restart: unless-stopped
 
