@@ -34,9 +34,13 @@ So exhaust does not go in `posts`. It also does not get four bespoke tables.
 
 ## Prominence belongs to the kind, not to recency
 
-Three destinations, and only one of them is scarce:
+Four destinations, and only one of them is scarce:
 
-- **The feed** — worth interrupting forty people for. Posts only. Guard it.
+- **The feed** — worth interrupting forty people for. Posts by people in this
+  room. Guard it.
+- **The reader** — feeds you subscribe to. A river you visit. `CLAUDE.md`'s
+  first sentence already promises one: *"a reader for your friends' private
+  blogs"*. See *"RSS is a transport"* below.
 - **A stream** — `/@dkam/listening`, `/@dkam/reading`. Ambient, visited, never
   pushed. Volume costs nothing here because nobody is interrupted.
 - **Attached to a post** — the ride the writeup is about, the link being
@@ -217,11 +221,286 @@ including, if they have set themselves `invisible`, over a pile of data that
 was gathered before they had expressed any preference about being seen. The
 moment of confirming is the right time to ask them what should happen to it.
 
+### A blog proves itself, and `sources` is not the only way
+
+The self-claimed tier does not need a credentialed connector. Andy puts
+`rel="me"` on his blog pointing at his Kith profile, and links the blog from
+that profile; Kith fetches once and checks both directions. Two-way `rel="me"`
+is what Mastodon's verified links and IndieAuth already do, it is about twenty
+lines, and it means the strongest tier is available to anything with an HTML
+page — which is most of what anybody wants linked.
+
+### One face, two switches
+
+This is the trap, and it is social rather than technical. Andy on this Kith and
+`andy@his-blog.com` are two actors with two follow edges. Render them as one
+person by all means — one avatar, *"also writes at his-blog.com"* — but **do
+not give the merged face one follow button.**
+
+One of those edges is a public feed. The other is a private account Andy
+personally approved. Collapse them and somebody who only wanted less blog noise
+has silently walked out of his circle, and the first either of them knows is an
+awkward conversation. The follow edge *is* the subscription; two subscriptions
+cannot hide behind one toggle.
+
+Two smaller consequences of a merged face:
+
+- **A merged profile is a union across two audiences** — his Kith posts are
+  followers-only, his blog is public. One page, two answers to "may I see
+  this". `Visibility` handles it per record, but `VisibilityTest`'s
+  predicate-versus-scope cross-check has to run over the *union*, or the merged
+  profile and a permalink disagree. That is the drift the tests already guard,
+  with a new way in.
+- **`discoverable: invisible` and a public blog contradict each other**, and
+  only Andy can say what he meant. Unresolved, and the moment of confirming is
+  when to ask — the same question this document already raises about data
+  gathered before anybody consented to it.
+
 ### The federation seam is free
 
 `actor_links` is `alsoKnownAs` and `Move` in ActivityPub terms — the actual
 mechanism for account migration. It would have been needed the first time
 somebody moved servers. It is not speculative machinery.
+
+---
+
+## The kinds — an inventory, not a roadmap
+
+Written 2026-09-23, to size `entries` against something wider than the two or
+three kinds anybody feels like building first. **Nothing here is a commitment
+to build it, and this list is not maintained** — it is a sweep of what
+plausibly arrives, so the schema is wide enough when the first kind is real.
+Most of these will never exist.
+
+Three shapes, and the shape decides the renderer and whether `uri` means
+anything at all.
+
+### Measurements — a number at a time
+
+The series is the thing; no single row is interesting, and there is nothing to
+link out to. Renders as a chart. `uri` is always NULL.
+
+These want **one `Measurement` class with a `metric` key in `data`**, not a
+class each: weight and VO2 max differ by a string and a unit, and nothing else.
+
+| metric | source | note |
+|---|---|---|
+| weight | scale, Health, typed | **never publishable** — see `Snapshot` below |
+| vo2max | watch | derived upstream; arrives as its own dated record |
+| mood | typed | LiveJournal's current-mood. Belongs here, not with occurrences |
+| resting_hr | watch | |
+| sleep | watch | duration, not an instant |
+| blood_pressure | cuff, typed | **two numbers in one reading.** `data` holds a reading, not a scalar |
+| steps | watch, phone | **a daily total, not a moment.** `occurred_at` is a day |
+
+The last two are the ones that stress the shape. Neither is a reason to grow a
+column — `data` is JSON — but a `Measurement` renderer that assumes one scalar
+at one instant will be wrong for both.
+
+**A run's distance and duration are not measurements.** They are facts of an
+occurrence and live in its `data`. A `Measurement` row is a number taken on its
+own. Exploding a ride into six measurement rows is the mistake this distinction
+exists to prevent.
+
+### Occurrences — a discrete thing that happened
+
+Interesting individually, with a canonical `uri` back to the source. Renders as
+a list of cards.
+
+| kind | source | note |
+|---|---|---|
+| Scrobble | last.fm, ListenBrainz | the volume case: ~50/day. Must never reach a feed |
+| Workout | Strava | GPS payload, radius-trimmed on import. Arrives as a draft |
+| Checkin | Swarm-ish, typed | followers-only even where posts are public; consider a delay |
+| Reading | TBDB | three entries per book, not one mutable row |
+| Watching | Letterboxd | same shape as Reading, one event or three |
+| Listening (podcast) | pocketcasts &c. | scrobble-shaped, lower volume |
+| Playing | Steam | |
+| Pushing | git forge | **exhaust a machine emits on your behalf.** Still yours |
+| Photograph | Immich, Flickr, Kith | bytes copied in, never hotlinked. Arrives as a draft |
+| Attending | typed, Songkick-ish | a gig, a talk. The first entry with a **future** `occurred_at` — an intention, not a record. `Join`/`Attend` in ActivityStreams |
+| Arriving | typed | coarse checkin at city scale. "Who is in Melbourne this week" without pinning a street |
+| Drinking | Untappd-ish, typed | the checkin's natural twin |
+| Cooking | typed | a meal made; pairs with a photo, which is the post |
+| Donating | typed | blood, money. The one purchase-shaped thing nobody minds sharing |
+| Acquiring | typed | a record bought, a book found. Sensitive — the thing, never the receipt |
+
+`Pushing` is worth keeping on the list precisely because it is the least
+personal: it proves `actor_id` means "whose exhaust", not "who was present".
+
+### Snapshots — a series, frozen
+
+A `Snapshot` is a range of measurements with the points copied into `data` at
+the moment somebody published it. It exists because **publishing a graph and
+publishing eight hundred rows are different acts**, and the second is a
+trapdoor.
+
+A post's audience is fixed at publication. A chart reading live from a growing
+series is not fixed — a post from March silently gains April's numbers, which
+is the second fact disagreeing with the first, again. Freezing the points is
+what makes a published graph obey the rule every post already obeys.
+
+What it buys is that **`Measurement` need never be publishable at all** — not
+private-by-default-until-you-flip-it, but absolutely, with no audience control
+on it anywhere. Only snapshots of it are publishable. One fewer switch that can
+be wrong, and the switch that does exist is attached to a deliberate act.
+
+One mechanism, several features: the glowup graph, *your year in books*, *your
+week in music*. A recap is a snapshot somebody was offered as a draft.
+
+### Objects — a thing noted
+
+`occurred_at` is when it was noted, not when it happened. The row is about
+something in the world; the actor is the one who noted it.
+
+| kind | source | note |
+|---|---|---|
+| Bookmark | typed, extension | the unfurl lives in `data`. Says so if a post attaches it |
+| Wishlist | booko | a *watch*, and the watch is the durable part — not the alert |
+
+### A checkin wants a `Place`, and a photo cannot quietly become one
+
+Two notes that only surface once checkins are real.
+
+**`StripMetadataJob` has already destroyed the GPS**, unconditionally and
+asynchronously, moments after the direct upload lands. So turning a photograph
+into a checkin cannot read the coordinate off the stored file — it has to be an
+**offer made in the composer, once, before the strip runs**, and discarded if
+not taken. The strip stays unconditional. Never infer a checkin, and never hold
+a coordinate because it might be wanted later: that is how a photograph of a
+child at home becomes a pin on the front door.
+
+Nor is it a *conversion*. A photograph and a checkin are two entries that one
+post attaches; conversion implies destroying one of them.
+
+**A `Place` is the first shared noun in the whole design.** Every other entry
+is personal — "The Dancing Goat" is the same cafe for everybody. That is a real
+fork: freetext and coordinates in `data` (cheap, and there is no page), or a
+`places` table (dedupe, a gazetteer to keep, and *"my favourite cafe"* becomes
+somewhere you and your friends both land). The page is the thing anybody
+actually misses about checkins, so the table probably wins in the end — but
+`data` first is not a wrong turning, only a smaller one.
+
+### Not exhaust, and the list is more useful for saying so
+
+- **A price-drop alert.** Nobody did anything and the subject is a book, not a
+  person. Storing it makes `entries.actor_id` mean "whose life" for every other
+  kind and "who is watching" for this one. The book is a `Wishlist` entry; the
+  drop is a notification against it. (`notifications.actor_id` is `null: false`
+  and means "who did this" — a webhook has no actor. That wants an answer
+  before this is built, and it is a smaller question than overloading entries.)
+- **"Now playing".** Derived — `MAX(occurred_at)` over scrobbles. Not a row,
+  and not a column on anything.
+- **Presence / online status.** Not stored. Not wanted.
+- **A continuous location trace.** Not event-shaped, and the most dangerous
+  data in the building. A checkin is a decision; a trace is surveillance. Kith
+  strips GPS from photographs — it does not then collect it by the minute.
+- **Your own blog's RSS.** That is a *post* by another actor of yours, reached
+  through `actor_links`, not exhaust. The test is the one at the top of this
+  document: somebody chose words and pressed publish.
+
+### What the inventory says about the schema
+
+Nothing in `The shape` above has to change — which is the point of having
+written it down. Specifically:
+
+- `data` as JSON absorbs a blood-pressure pair, a GPS track's summary and an
+  unfurl without a column each.
+- `uri` has to be genuinely nullable: every measurement lacks one.
+- `occurred_at` is sometimes a day rather than a moment (steps, a book
+  finished). Store the timestamp; let the renderer decide what to show.
+- `source_id` has to be nullable. Weight, checkins and bookmarks are typed in
+  by hand as often as they are synced, which also means `(source_id,
+  external_id)` uniqueness must tolerate a NULL source.
+- The audience enum needs a **`private`** value — for a bookmark kept to
+  yourself and a checkin logged but not shared. `published_at: NULL` is the
+  wrong tool for those: it says "unfinished", and the first `Entry.live` scope
+  anybody writes would drop them out of their owner's own stream.
+  `Measurement` is stronger than a default here — it sits at `private` and has
+  no control to leave it.
+- `occurred_at` is occasionally in the **future** (`Attending`). Any scope that
+  assumes otherwise — a naive `Entry.live` copied from `Post.live` — will hide
+  exactly the entries whose whole point is that they have not happened yet.
+
+---
+
+## RSS is a transport, not a kind
+
+The same protocol carries a friend's blog — **posts**, somebody chose words and
+pressed publish — and their last.fm or Letterboxd feed, which is **exhaust**.
+The XML does not say which, so the `FeedActor` has to: you declare what a feed
+is when you subscribe, once, and it does not change.
+
+**Subscribed feeds go to the reader, not the feed.** Not as a rank below
+friends' posts — as a different surface. Ranking by transport is the wrong
+argument anyway (Andy on his blog is still Andy); the real line is *written for
+this room* versus *published to the world*, and a separate surface says that
+without having to defend a tier.
+
+What it buys is worth more than the tidiness: **the only way an item reaches
+forty people is that a human wrote a sentence about it.** That is the
+no-boosting rule enforced by an absent code path rather than by a policy
+somebody has to remember — the same move as the consent rule above.
+
+### Promotion is a link post, and it must cost a sentence
+
+The machinery already exists: a link makes a `Bookmark`, and saying something
+about it makes a post that attaches it. From the reader it is one gesture —
+promote, composer opens, bookmark attached.
+
+The line it must not cross is the quote-repost. The test is simple: **does it
+require your words?** A link post publishable empty is a boost with extra
+steps, and `Post#must_say_something` is already the guard:
+
+```ruby
+def must_say_something
+  return if title.present? || body.present?
+```
+
+Attaching an entry must **never** satisfy that. The day it grows
+`|| entries.any?`, Kith has reposting, and the changelog will say "allow
+link-only posts".
+
+Two smaller ones:
+
+- **Cards for outside, plain links for inside.** An unfurl card for an external
+  URL is a citation. The same card rendering a friend's Kith post inside yours
+  is a quote-post. Link to their permalink in prose.
+- **Do not double-store.** If the URL is already in Kith as a remote post from a
+  feed you follow, the bookmark points at that post rather than unfurling it
+  again. `posts.uri` is the key, and it is already a nullable column meant for
+  exactly this. The mirror of the rule that a bookmark written about should say
+  so.
+
+---
+
+## The hub, and what the old web did well
+
+Not exhaust and not events — profile furniture, which is the other half of
+"a hub for you on the internet". Cheap, and mostly already paid for:
+
+- **A now page.** nownownow.com, and `.plan` before it. **The one thing in Kith
+  that is deliberately mutable** — no history, no versions, just what you are
+  doing at the moment. Worth saying out loud because everything else here is
+  append-only.
+- **Elsewhere.** Your other accounts, from `actor_links`. Nearly free, and the
+  most literal answer to "a hub".
+- **Blogroll.** Who you follow, published. The cheapest federation seam there
+  is.
+- **Interests.** The LiveJournal list, which *was* the discovery mechanism
+  before search existed — and Kith has no search. Forty people and a shared
+  word is enough.
+- **Current rotation.** A few records you chose to point at. A human pick over
+  the exhaust, and the antidote to a scrobble stream nobody reads.
+- **Tags**, on bookmarks first. The seam for search when it comes.
+- **Guestbook.** Comments on a profile rather than a post. A moderation
+  nightmare at scale; at forty people, just nice.
+- **On this day** — private resurfacing only, never a push. A notification
+  about a dead friend is why this feature has the name it has.
+
+**Rejected on sight:** streaks (coercive by design), mayorships, karma, flair,
+leaderboards, displayed follower counts, Top 8, read receipts. Same rule as
+*no likes*, arriving each time in a different hat.
 
 ---
 
@@ -293,6 +572,11 @@ and every existing media rule applies unchanged, EXIF stripping included.
   `where domain IS NULL` — local only. A local `andy` and `andy@last.fm` both
   want `/@andy`. Mastodon's `/@andy@last.fm` is the obvious answer, and it is
   cheaper to decide before there are links in the wild pointing at the old form.
+
+- **`Post#must_say_something` is load-bearing and does not say so.** It is the
+  only thing standing between a link post and a quote-repost, and it looks like
+  an empty-form guard. Anybody adding attachments to posts will be tempted to
+  widen it. Don't.
 
 - **Volume on SQLite is fine, as long as nothing fans out.** Fifty scrobbles a
   day across forty members over five years is a few million rows, which SQLite
