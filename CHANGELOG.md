@@ -15,6 +15,14 @@ do, independently of the release version.
 
 ## Unreleased
 
+## 0.3.0 — 2026-09-24
+
+Kith leaves the browser tab. It installs to a home screen, takes a link from
+the share sheet, and lets an assistant read a member's Kith — and write to it,
+if they say so — through an endpoint that answers to `Visibility` like
+everything else. A profile can reach the open web now, for anyone who climbs to
+that rung, and nobody is put there by default.
+
 ### Kith installs to a home screen
 
 Forty people read this on a phone, and a browser tab is the wrong container for
@@ -127,6 +135,10 @@ the only place every MCP client can carry one, and `token` is already in
 which is why the lookup silences the logger around itself.
 
 ## 0.2.0 — 2026-09-23
+
+**Never built.** This release was cut on a line of work that had not yet met
+the phone and MCP work, and the merge that joined them went out as 0.3.0.
+Everything below first shipped there.
 
 Everything a private network needs before it can actually be deployed: a post
 you haven't finished, a clock that is yours, somewhere for crashes to go, and a

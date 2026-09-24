@@ -12,7 +12,7 @@
 # CLAUDE.md. A pre-release (anything with a hyphen, e.g. "0.2.0-dev") publishes
 # its own image tag but does not move :latest and does not tag the commit.
 module Kith
-  VERSION = "0.2.0"
+  VERSION = "0.3.0"
 
   # The oldest phone app this instance will talk to, published in its NodeInfo
   # so a shell can say "this Kith needs a newer Kith" rather than failing in
