@@ -53,7 +53,7 @@ gem "lexxy", "~> 0.9.32"
 gem "sentry-rails"
 # The official Ruby MCP SDK, for the per-member endpoint an agent connects to
 # [https://github.com/modelcontextprotocol/ruby-sdk]
-gem "mcp", "~> 1.5"
+gem "mcp", "~> 1.6"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
