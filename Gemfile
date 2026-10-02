@@ -46,7 +46,7 @@ gem "thruster", require: false
 gem "image_processing", "~> 1.2"
 
 # Rich text editor for Action Text, built on Lexical [https://lexxy.dev]
-gem "lexxy", "~> 0.9.32"
+gem "lexxy", "~> 1.0.0"
 
 # Optional error reporting. Inert unless SENTRY_DSN is set — see ErrorReport,
 # which decides what is allowed to leave the instance in a crash report.
