@@ -583,6 +583,60 @@ and every existing media rule applies unchanged, EXIF stripping included.
   reads happily off an index. The same data multiplied into `feed_items` is
   not, and is also not wanted.
 
+## One password, and as many identity providers as you like
+
+The way in is an email address and a password, as it is now. OIDC is something
+you **add to an account that already exists**: a button on the settings page
+that says *associate OIDC with this account*, which sends you to Clinch, Google,
+Voidauth or whatever else you run, brings you back, and records the pairing.
+After that, the same button is a second way in next time.
+
+That ordering is not a convenience. It is the invite-only rule wearing a
+different coat.
+
+- **An identity provider must never be able to create a member.** If signing in
+  with Google could make an account, Google decides who is in Kith — and so
+  does every other issuer anybody ever adds, and so does anyone who can get an
+  address at a domain one of them trusts. Invite-only would then mean
+  "invite-only, plus whoever an IdP vouches for". So there is no OIDC signup
+  path at all, and no "create an account if none matches" branch to forget to
+  close: association happens **only** from an already-authenticated session, and
+  an assertion that matches nothing is a dead end rather than a door.
+
+- **Match on `(issuer, subject)`, never on email.** `sub` is the only claim an
+  issuer promises is both stable and unique within itself. An email address is
+  neither: people change them, and — the part that bites — an address can be
+  reassigned, so an issuer that lets somebody claim `dan@example.com` hands them
+  the Kith account that was matched on it. Two columns, unique on the pair,
+  because the same `sub` from a different issuer is a different person. The
+  email in the assertion is worth storing as a display detail and worth nothing
+  as a key.
+
+- **The password never goes away.** `members.password_digest` stays
+  `null: false`, which is why nothing about the schema has to be relaxed for
+  this. An IdP is a single point of failure Kith does not control — a
+  self-hosted Voidauth upgraded badly on a Sunday, a Google account locked for
+  reasons nobody will explain — and if it were the only way in, that is a
+  lockout. `Member.reset_password!` from the console already exists for exactly
+  this kind of afternoon.
+
+- **It is the same shape as passkeys, so build one table, not two.** Both are
+  "a thing other than a password that proves you are this member", both are
+  added from inside a session, both come in multiples, and both need naming and
+  revoking in the same list — the same argument that gave `mcp_tokens` a name
+  per token rather than one endpoint per member. One `credentials` table,
+  `belongs_to :member`, STI on `type`, with the identifying columns per kind;
+  whichever of the two lands first should build it for both.
+
+- **An association is nobody else's business.** Which issuers a member uses is
+  not shown on their profile and not a count anywhere. It is a credential, and
+  credentials are not disclosures.
+
+Neither of these is in phase 1 — OIDC sits in the same bucket as passkeys, for
+the same reason. The seam is that there is nothing to unpick: authentication is
+still the generated email-and-password path, `has_secure_password` on `Member`,
+and sessions that know only a member id.
+
 ## What phase 1 must not close
 
 Nothing, as it happens — the seams are all open, which is why none of this is

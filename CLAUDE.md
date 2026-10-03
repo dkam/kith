@@ -25,7 +25,11 @@ file is the living version of it: where the two disagree, this one wins, and
   are HTML, written in the editor and stored as written. There is no Markdown
   in the database; Lexxy's Markdown *shortcuts* are an input convenience.
 - Auth from `bin/rails generate authentication`. **Not Devise.** Email/password
-  now; passkeys later.
+  is the way in, and stays the way in. Passkeys and OIDC come later, and both
+  are things a signed-in member *adds* to an account that already exists — an
+  identity provider must never be able to create a member, or invite-only means
+  "plus whoever an IdP vouches for". See *"One password, and as many identity
+  providers as you like"* in `docs/phase-two.md`.
 - Active Storage with `rails_storage_proxy` route resolution and
   `image_processing` (vips). Disk service in dev, S3-compatible in prod via env.
 - Minitest, fixtures, system tests with headless Chrome. **No RSpec, no
@@ -574,7 +578,7 @@ was v1.7.8 — eight releases with no commit you could check out.
    the writing tools exist; `McpServer.tools_for` decides once, from the grant.
 
 **Not in phase 1**: federation, ActivityPub, RSS ingest, circles, likes,
-passkeys, search, DMs.
+passkeys, OIDC, search, DMs.
 
 ---
 
