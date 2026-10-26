@@ -118,7 +118,8 @@ fan-out path, no second thing that can disagree with the first.
 
 **My own data comes through `sources`** — authenticated, rich, and as complete
 as the service will give up. Strava's GPS, Immich's originals, ListenBrainz's
-full history.
+full history. (Strava's comes from an export the member uploads, not from its
+API — see *Fitness* below.)
 
 **Everyone else's comes through a feed they publish.** Following `andy@last.fm`
 is following an RSS feed; `FeedActor` already covers it and no last.fm adapter
@@ -310,7 +311,7 @@ a list of cards.
 | kind | source | note |
 |---|---|---|
 | Scrobble | last.fm, ListenBrainz | the volume case: ~50/day. Must never reach a feed |
-| Workout | Strava | GPS payload, radius-trimmed on import. Arrives as a draft |
+| Workout | Strava export, GPX/FIT | GPS payload, radius-trimmed on import. Arrives as a draft |
 | Checkin | Swarm-ish, typed | followers-only even where posts are public; consider a delay |
 | Reading | TBDB | three entries per book, not one mutable row |
 | Watching | Letterboxd | same shape as Reading, one event or three |
@@ -540,6 +541,64 @@ import, default on, and store only the trimmed track — not a display filter
 over a full track that some later endpoint serves whole. Same instinct as
 `StripMetadataJob` rewriting the blob in place rather than keeping the original
 around.
+
+**Strava arrives as an export, never through its API.** Decided 2026-10-26.
+The API agreement (effective 2026-06-01) says data a user provides *"can only
+be displayed or disclosed in your Developer Application to that user"*, which
+rules out the one thing Kith exists to do with a ride, and a new API app can
+connect a single athlete until Strava reviews it. A member's own account export
+is the member's own file, and importing it is the same act as uploading a GPX
+off a Garmin. So the Strava source holds no credential at all: it is a
+`sources` row with a kind and no secret, there so that `(source_id,
+external_id)` — the Strava activity id — makes the next import idempotent.
+Exports are cumulative; the next one is the whole history again.
+
+- **An export is the whole account**, not just the activities: logins,
+  messages, device identifiers, followers, and privacy zones with street
+  addresses in them. The importer reads `activities.csv`, `activities/` and
+  `media/` by allowlist and nothing else, and the uploaded zip is purged when
+  the import finishes. Kith keeps entries, not the export.
+- **`Activity Private Note` never comes in.** It is Strava's owner-only field,
+  and no audience Kith could give it would mean the same thing.
+- **The privacy zones are worth reading, and not worth keeping.** Trimming the
+  ends of a ride catches one that starts at home. It does not catch one that
+  passes the house halfway round, or starts at a partner's flat.
+  `privacy_zones.csv` is the member having already said where those places
+  are. Use it in memory during the import as a second trim, re-read from each
+  export, and never persisted. That is the same instinct as the composer's
+  one-time GPS offer. The end trim is the guarantee and the zones are the
+  extra: an export can carry none at all, and the first real one did not.
+- **Formats.** One real export held 320 `.gpx`, 10 `.gpx.gz`, 44 `.fit.gz` and
+  1 `.tcx.gz` across 375 activities. GPX and TCX are XML, which Nokogiri
+  already reads. FIT is binary and needs either a hand-written decoder or a
+  gem, and a gem is an ask.
+- **Conformance runs against a real export that is never in the repository.**
+  Tests find it through `KITH_STRAVA_EXPORT` and skip without it; the committed
+  fixtures are synthetic. The original file is the test's answer key: no
+  stored point lies within the trim radius of either end of the ride as
+  recorded, nor inside any zone the export names. Failure messages name
+  activity ids, never coordinates.
+- **The zip is the only way in, and running it again is how new rides
+  arrive.** Not single activity files as well: a lone GPX comes without
+  `privacy_zones.csv`, so a ride added that way would be trimmed at its ends
+  and nowhere else, and the one that passes the house halfway round would go
+  through whole. Single files can come when Kith holds privacy zones of its
+  own, which the phone app needs anyway.
+- **A re-run mirrors Strava only where no reader has looked.** A new activity
+  id is a new draft. A known id that is still a draft is rebuilt from the new
+  file, so a rename, a corrected type or a changed trim radius all land —
+  nobody has seen it, so nothing is lost. A known id that has been published is
+  left alone. An id missing from the newer export was deleted on Strava: a
+  draft goes with it, a published entry stays, because by then it is the
+  member's own, and deleting it would change what a reader already saw.
+- **A trim makes a gap, not a shortcut.** Dropping the points inside a zone
+  and joining the line across it draws a straight line through the house. A
+  trimmed track is a list of segments, and a ride that never leaves its zones
+  has no track at all.
+- **Not everything in a row is a fact worth copying.** The summary keeps what
+  the ride was — name, type, distance, time, climb. `Athlete Weight` stays out
+  for the reason weight is never publishable, and heart rate and calories wait
+  until there is a renderer that has thought about health data.
 
 **Photos** (Immich) — **copy, do not hotlink.** An `<img src>` pointing at
 Immich breaks the rule that `MediaHelper` is the only thing in the app that
