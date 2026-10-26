@@ -575,7 +575,7 @@ Exports are cumulative; the next one is the whole history again.
 - **Conformance runs against a real export that is never in the repository.**
   Tests find it through `KITH_STRAVA_EXPORT` and skip without it; the committed
   fixtures are synthetic. The original file is the test's answer key: no
-  stored point lies within the trim radius of either end of the ride as
+  stored point lies within the guaranteed margin of either end of the ride as
   recorded, nor inside any zone the export names. Failure messages name
   activity ids, never coordinates.
 - **The zip is the only way in, and running it again is how new rides
@@ -595,8 +595,41 @@ Exports are cumulative; the next one is the whole history again.
   and joining the line across it draws a straight line through the house. A
   trimmed track is a list of segments, and a ride that never leaves its zones
   has no track at all.
+- **A trim must not leak what it removed.** Two papers, two lessons.
+  - Hassan, Hussain and Bates (*"You can run, but can you hide?"*, USENIX
+    Security 2018): with a circle centred on home, the cut points of a handful
+    of rides all sit on it, and fitting a circle to them finds the front door.
+    Randomising the radius per ride does not help. The points scatter across
+    a band, but the band is still centred on home. What moves the centre is an
+    **offset that never changes**: the trim circle is centred a secret, fixed
+    distance and bearing away from the ride's own first point, so the fitted
+    centre lands somewhere that is not home. It is per member, and derived
+    from `secret_key_base` the way the setup code is, so nothing is stored and
+    every source agrees. It is never re-drawn, because re-drawing a zone gives
+    an attacker more cut points.
+  - Dhondt, Le Pochat et al. (*"A Run a Day Won't Keep the Hacker Away"*, CCS
+    2022): the stronger attack does not need the circle at all. It needs the
+    distance covered inside it, which leaks from the reported total against
+    the visible track, and from timestamps. With that, regression on the
+    street grid found up to 85% of protected locations, against Strava's
+    current randomised, off-centre zones. The countermeasure they found to
+    work outright is to report nothing about the hidden part. They objected
+    only on behalf of leaderboards, and Kith has none. So a workout's
+    distance, moving time and climb are **computed from the trimmed track**,
+    never copied from Strava. Track times count from the start of each
+    segment, so neither end, nor the gap across a zone, can be timed. A
+    member's true totals stay in Strava. A ride with no track left — indoors,
+    or entirely inside its zones — keeps Strava's numbers, since there is no
+    geometry for them to place.
+  - **A workout never links to Strava.** The Strava activity shows the whole
+    track and the true totals to whoever Strava lets see it, which undoes all
+    of the above in one click. `uri` stays NULL; the id is in `external_id`.
+  - **Changing the trim radius after publishing is a re-draw.** Published
+    rides keep the old trim, new ones get the new, and the two sets of cut
+    points together tell an attacker more than either does alone.
 - **Not everything in a row is a fact worth copying.** The summary keeps what
-  the ride was — name, type, distance, time, climb. `Athlete Weight` stays out
+  the ride was — name and type from the row, and distance, moving time and
+  climb from the trimmed track. `Athlete Weight` stays out
   for the reason weight is never publishable, and heart rate and calories wait
   until there is a renderer that has thought about health data.
 
