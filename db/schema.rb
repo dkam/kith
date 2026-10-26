@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_26_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_000100) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -74,6 +74,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_120000) do
     t.index ["actor_id"], name: "index_comments_on_actor_id"
     t.index ["post_id", "created_at"], name: "index_comments_on_post_id_and_created_at"
     t.index ["post_id"], name: "index_comments_on_post_id"
+  end
+
+  create_table "entries", force: :cascade do |t|
+    t.integer "actor_id", null: false
+    t.integer "audience", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.json "data", default: {}, null: false
+    t.string "external_id"
+    t.datetime "occurred_at", null: false
+    t.datetime "published_at"
+    t.integer "source_id"
+    t.string "type", null: false
+    t.datetime "updated_at", null: false
+    t.string "uri"
+    t.index ["actor_id", "type", "occurred_at"], name: "index_entries_on_actor_id_and_type_and_occurred_at"
+    t.index ["source_id", "external_id"], name: "index_entries_on_source_id_and_external_id", unique: true
   end
 
   create_table "feed_items", force: :cascade do |t|
@@ -195,10 +211,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_120000) do
     t.index ["member_id"], name: "index_sessions_on_member_id"
   end
 
+  create_table "sources", force: :cascade do |t|
+    t.json "config", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.integer "kind", null: false
+    t.datetime "last_imported_at"
+    t.integer "member_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["member_id", "kind"], name: "index_sources_on_member_id_and_kind", unique: true
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "comments", "actors"
   add_foreign_key "comments", "posts"
+  add_foreign_key "entries", "actors"
+  add_foreign_key "entries", "sources"
   add_foreign_key "feed_items", "members"
   add_foreign_key "feed_items", "posts"
   add_foreign_key "follows", "actors", column: "followed_actor_id"
@@ -212,4 +240,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_120000) do
   add_foreign_key "notifications", "members"
   add_foreign_key "posts", "actors"
   add_foreign_key "sessions", "members"
+  add_foreign_key "sources", "members"
 end

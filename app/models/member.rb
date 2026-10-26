@@ -13,6 +13,7 @@ class Member < ApplicationRecord
   has_many :feed_items, dependent: :delete_all
   has_many :mcp_tokens, dependent: :destroy
   has_many :notifications, dependent: :delete_all
+  has_many :sources, dependent: :destroy
   has_many :invited_members, class_name: "Member", foreign_key: :inviter_member_id, dependent: :nullify
 
   accepts_nested_attributes_for :actor
