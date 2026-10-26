@@ -207,4 +207,51 @@ class MemberTest < ActiveSupport::TestCase
     assert_equal Time.zone, members(:alice).zone
     assert_equal ActiveSupport::TimeZone["Melbourne"], members(:alice).tap { |m| m.time_zone = "Melbourne" }.zone
   end
+
+  # --- The trim -----------------------------------------------------------------
+
+  def new_member(handle)
+    Member.create!(email_address: "#{handle}@example.com", password: "password123", inviter_member: members(:alice),
+      actor: LocalActor.new(handle:, display_name: handle.capitalize))
+  end
+
+  test "a new member is given an offset at random, within its ranges, and the default radius" do
+    member = new_member("frank")
+
+    assert_equal 500, member.trim_radius_m
+    assert_operator member.trim_bearing_deg, :>=, 0
+    assert_operator member.trim_bearing_deg, :<, 360
+    assert_operator member.trim_offset_m, :>=, 125
+    assert_operator member.trim_offset_m, :<=, 250
+  end
+
+  test "two members' offsets differ" do
+    a, b = new_member("frank"), new_member("grace")
+
+    assert_not_equal [ a.trim_bearing_deg, a.trim_offset_m ], [ b.trim_bearing_deg, b.trim_offset_m ]
+  end
+
+  test "an offset is never re-drawn: neither column can be changed once it is stored" do
+    member = members(:alice)
+    bearing, offset = member.trim_bearing_deg, member.trim_offset_m
+
+    assert_raises(ActiveRecord::ReadonlyAttributeError) { member.update(trim_bearing_deg: (bearing + 90) % 360) }
+    assert_raises(ActiveRecord::ReadonlyAttributeError) { member.update(trim_offset_m: 200.0) }
+    assert_equal [ bearing, offset ], member.reload.values_at(:trim_bearing_deg, :trim_offset_m)
+  end
+
+  test "the radius can change, and has to be a positive whole number of metres" do
+    member = members(:alice)
+
+    assert member.update(trim_radius_m: 800)
+    refute member.update(trim_radius_m: 0)
+    refute member.update(trim_radius_m: 250.5)
+  end
+
+  test "member.trim is the member's radius and offset, as Track takes them" do
+    member = members(:alice)
+
+    assert_equal Track::Trim.new(radius_m: member.trim_radius_m, bearing_deg: member.trim_bearing_deg,
+      offset_m: member.trim_offset_m), member.trim
+  end
 end
