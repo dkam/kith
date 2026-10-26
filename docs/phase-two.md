@@ -603,10 +603,15 @@ Exports are cumulative; the next one is the whole history again.
     a band, but the band is still centred on home. What moves the centre is an
     **offset that never changes**: the trim circle is centred a secret, fixed
     distance and bearing away from the ride's own first point, so the fitted
-    centre lands somewhere that is not home. It is per member, and derived
-    from `secret_key_base` the way the setup code is, so nothing is stored and
-    every source agrees. It is never re-drawn, because re-drawing a zone gives
-    an attacker more cut points.
+    centre lands somewhere that is not home. It is per member, random, and
+    **stored** on `members` beside the radius. It is not a location, so
+    storing it costs nothing. It is handed to the member's phones, so every
+    trim of their rides, wherever it runs, uses the same circle: two devices
+    with two offsets would be two families of cut points, the re-draw problem
+    across devices instead of over time. It is never re-drawn, because
+    re-drawing gives an attacker more cut points. For the same reason it is
+    not derived from `secret_key_base`, since rotating that after a leak is
+    exactly when nobody would think of it.
   - Dhondt, Le Pochat et al. (*"A Run a Day Won't Keep the Hacker Away"*, CCS
     2022): the stronger attack does not need the circle at all. It needs the
     distance covered inside it, which leaks from the reported total against
