@@ -35,6 +35,11 @@
 
 /public/assets
 
+# A real Strava account export, for conformance tests: logins, messages, device
+# ids and privacy zones as well as every ride. Never committed. Also in
+# .dockerignore, because bin/build builds the working tree, untracked or not.
+/strava/
+
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 

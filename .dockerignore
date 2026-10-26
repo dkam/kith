@@ -30,6 +30,11 @@
 /tmp/storage/*
 !/tmp/storage/.keep
 
+# A real Strava account export, kept for conformance tests. bin/build ignores
+# untracked files when it checks for a clean tree, so this line is the only
+# thing keeping it out of the image.
+/strava/
+
 # Ignore assets.
 /node_modules/
 /app/assets/builds/*
