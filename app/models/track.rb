@@ -63,15 +63,19 @@ class Track
     data
   end
 
+  # A segment of one point is not a line, so it is dropped: a GPX may hold one,
+  # and a stored MultiLineString may not.
+  #
   # Elevation and times are all or nothing: if any point lacks one, every point
   # loses it, so a stored track never has a position with elevation beside one
   # without.
   def initialize(segments)
-    segments = segments.map(&:to_a).reject(&:empty?)
-    points = segments.flatten
-    unless points.all? { |point| point.lat.to_f.between?(-90, 90) && point.lon.to_f.between?(-180, 180) }
+    segments = segments.map(&:to_a)
+    unless segments.flatten.all? { |point| point.lat.to_f.between?(-90, 90) && point.lon.to_f.between?(-180, 180) }
       raise Malformed, "a point is not a position"
     end
+    segments = segments.select { |segment| segment.size >= 2 }
+    points = segments.flatten
     elevated = points.all?(&:ele)
     timed = points.all?(&:time)
 

@@ -132,6 +132,17 @@ class TrackTest < ActiveSupport::TestCase
     assert_equal track.to_geojson, again.to_geojson
   end
 
+  # A GPX can hold a <trkseg> of one point, and a real export does. A
+  # MultiLineString cannot: each line needs two positions. A track is lines,
+  # so a lone point is not part of one, and whatever is written reads back.
+  test "a segment of one point is not a line, so a track drops it, and what it writes reads back" do
+    track = Track.new([ [ point(0.0, time: 0) ], [ point(0.010, time: 0), point(0.011, time: 10) ], [ point(0.02, time: 90) ] ])
+
+    assert_equal [ 2 ], track.segments.map(&:size)
+    assert_equal track, Track.from_geojson(track.to_geojson)
+    assert Track.new([ [ point(0.0) ] ]).empty?
+  end
+
   test "from_geojson refuses anything that is not the stored shape" do
     [
       "not json",
