@@ -1,5 +1,5 @@
-# The stored form of a track, and a contract: the phone apps write and read the
-# same thing.
+# The stored form of a track, and a contract: one format for the whole ride and
+# for a trimmed copy, which the phone API will share.
 #
 #   { "type": "Feature",
 #     "geometry": { "type": "MultiLineString",

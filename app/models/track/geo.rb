@@ -1,7 +1,7 @@
-# The two formulas a trim is made of. They are pinned, not merely chosen:
-# Swift and Kotlin implement the same trim on the member's phones, and the
-# shared fixtures in test/fixtures/files/trim/ hold all three to the same
-# answers. Change one here and it is a new trim version, not a fix.
+# The two formulas a trim is made of. They are pinned, not merely chosen: a
+# shared copy records the trim version that cut it, and the fixtures in
+# test/fixtures/files/trim/ hold this and an independent Python version to the
+# same answers. Change one here and it is a new trim version, not a fix.
 #
 #   mean Earth radius  R = 6 371 008.8 m
 #

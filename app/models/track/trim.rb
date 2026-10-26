@@ -17,16 +17,14 @@
 # points would then point straight at it. For the same reason it is fixed per
 # member and never re-drawn.
 #
-# VERSION names the formulas in Track::Geo and the steps in Track#trim. Swift
-# and Kotlin implement the same version from test/fixtures/files/trim/, and
-# every workout records the version that cut it, so a version found to be
-# wrong can be retired and its tracks found.
+# VERSION names the formulas in Track::Geo and the steps in Track#trim. Only
+# the server trims, and every shared copy will record the version that cut it,
+# so a version found to be wrong can be retired and its copies found.
 class Track::Trim < Data.define(:radius_m, :bearing_deg, :offset_m)
   VERSION = 1
 
   Circle = Data.define(:lat, :lon, :radius_m) do
-    # Strictly inside: a point exactly on the boundary survives, in every
-    # implementation.
+    # Strictly inside: a point exactly on the boundary survives.
     def cover?(point) = Track::Geo.distance_m(lat, lon, point.lat, point.lon) < radius_m
   end
 

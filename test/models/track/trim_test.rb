@@ -29,7 +29,7 @@ class Track::TrimTest < ActiveSupport::TestCase
     assert_equal 0, near, "#{near} points survived within #{metres_of} m"
   end
 
-  # --- Shared with kith-ios and kith-android ---------------------------------
+  # --- The fixtures, answered by generate.py ---------------------------------
 
   Dir[FIXTURES.join("*.json")].sort.each do |path|
     name = File.basename(path, ".json")

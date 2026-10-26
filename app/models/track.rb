@@ -113,7 +113,7 @@ class Track
   end
 
   # Trim v1 — see Track::Trim, and test/fixtures/files/trim/README.md, which
-  # states the same steps for the phone apps:
+  # states the same steps beside the cases that check them:
   #
   # 1. A circle around the ride's first point and one around its last, to the
   #    trim's radius, and one around each zone, to the zone's.

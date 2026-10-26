@@ -1,9 +1,9 @@
 # Trim fixtures, v1
 
-These files are shared by **kith-web, kith-ios and kith-android**. Each
-implementation of the trim runs every case here and must produce the expected
-output. If two implementations disagree, one of them has a bug; do not edit a
-fixture to make one pass.
+Each case here is run by `Track::TrimTest`, and Kith's trim must produce the
+expected output. Only the server trims; the answers come from a second,
+independent implementation (see *Where they come from*). If the two disagree,
+one of them has a bug; do not edit a fixture to make Ruby pass.
 
 The rules are trim v1, as pinned in kith-web's `app/models/track/geo.rb` and
 `Track#trim`. A changed rule is a new trim version and a new directory of
@@ -74,10 +74,10 @@ between JSON writers. A float tolerance of `1e-9` is ample, since stored values
 have 6 decimal places.
 
 No input point lies within 1 m of any circle's boundary, so floating-point
-differences between languages cannot move a point from one side to the other.
+differences between Ruby and Python cannot move a point from one side to the other.
 No input value sits exactly on a rounding half either, because languages
-disagree about those: Python rounds half to even, while Ruby and Swift's
-`rounded()` round half away from zero. Use half away from zero. `generate.py`
+disagree about those: Python rounds half to even, while Ruby's `round`
+rounds half away from zero. Use half away from zero. `generate.py`
 checks both before it writes a case.
 
 ## Where they come from
