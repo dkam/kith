@@ -73,15 +73,16 @@ class Track::TrimTest < ActiveSupport::TestCase
   end
 
   test "a privacy zone mid-ride splits the segment, and does not join across it" do
+    # Offset north, off the line of the ride, so each circle crosses it
+    # √(R² + 2R|o|) either side of its point: 707.1 m for the ends, 489.9 m for
+    # the zone. That leaves 710–2510 m and 3490–5290 m, no boundary near a point.
     zone = Track::Zone.new(lat: 0.0, lon: Track::Geo.destination(0.0, 0.0, 90.0, 3_000).last, radius_m: 300)
-    trimmed = ride(length_m: 6_000).trim(trim, zones: [ zone ])
+    trimmed = ride(length_m: 6_000).trim(trim(bearing_deg: 0.0), zones: [ zone ])
 
-    assert_equal 2, trimmed.segments.size
+    assert_equal [ 181, 181 ], trimmed.segments.map(&:size)
     assert_nothing_within trimmed, metres_of: 300, lat: zone.lat, lon: zone.lon
-    gap = metres(trimmed.segments.first.last, trimmed.segments.last.first.lat, trimmed.segments.last.first.lon)
-    assert_operator gap, :>, 600
-    assert_in_delta ride(length_m: 6_000).distance_m - 600, trimmed.distance_m, 3 * 750,
-      "the distance is the two pieces, not a line across the zone"
+    # Joined across the zone, it would be 4580 m.
+    assert_in_delta 3_600.0, trimmed.distance_m, 0.2, "the distance is the two pieces, not a line across the zone"
   end
 
   test "a ride entirely inside the radius leaves nothing" do
@@ -92,14 +93,25 @@ class Track::TrimTest < ActiveSupport::TestCase
     assert Track.new([]).trim(trim).empty?
   end
 
-  test "a segment left with fewer than two points is dropped" do
-    # Two points, the second 1.2 km out: it survives the start circle and is
-    # the ride's last point, so its own circle takes it. Nothing is left.
-    lat, lon = Track::Geo.destination(0.0, 0.0, 90.0, 1_200)
-    track = Track.new([ [ Track::Point.new(lon: 0.0, lat: 0.0, ele: nil, time: 0),
-                          Track::Point.new(lon:, lat:, ele: nil, time: 100) ] ])
+  test "a lone point left between two removed stretches is dropped" do
+    # A point every 100 m for 3.5 km, offset north. Two zones of 200 m, at 1300
+    # and 2100 m, each cross the line 374.2 m either side, so only the point at
+    # 1700 m survives between them, alone. The ends leave 800–900 m and
+    # 2500–2700 m.
+    zones = [ 1_300, 2_100 ].map { |m|
+      Track::Zone.new(lat: 0.0, lon: Track::Geo.destination(0.0, 0.0, 90.0, m).last, radius_m: 200)
+    }
+    trimmed = ride(length_m: 3_500, every_m: 100.0).trim(trim(bearing_deg: 0.0), zones:)
 
-    assert track.trim(trim).empty?
+    assert_equal [ 2, 3 ], trimmed.segments.map(&:size)
+  end
+
+  test "a point exactly on a circle's boundary survives: the test is strictly inside" do
+    point = Track::Point.new(lon: 0.004, lat: 0.003, ele: nil, time: nil)
+    radius = Track::Geo.distance_m(0.0, 0.0, point.lat, point.lon)
+
+    assert_not Track::Trim::Circle.new(lat: 0.0, lon: 0.0, radius_m: radius).cover?(point)
+    assert Track::Trim::Circle.new(lat: 0.0, lon: 0.0, radius_m: radius.next_float).cover?(point)
   end
 
   test "a bigger radius cuts more" do

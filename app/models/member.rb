@@ -30,7 +30,9 @@ class Member < ApplicationRecord
   # How this member's rides are trimmed — see Track::Trim. The offset is drawn
   # once, at random, and never again: a re-drawn offset is a second set of cut
   # points around a second centre, and the two together point at home. The
-  # radius may change, and that is a re-draw too, for rides trimmed afterwards.
+  # radius may change: the offset is in metres, so the new circles share the old
+  # centre. A shared copy is frozen, so a new radius reaches only rides first
+  # shared after it.
   attribute :trim_bearing_deg, default: -> { SecureRandom.random_number * 360 }
   attribute :trim_offset_m, default: -> { 125 + SecureRandom.random_number * 125 }
   attr_readonly :trim_bearing_deg, :trim_offset_m
