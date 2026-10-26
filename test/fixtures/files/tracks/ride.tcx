@@ -1,0 +1,38 @@
+          <?xml version="1.0" encoding="UTF-8"?>
+<!-- Invented, in the open Pacific. The whitespace before the declaration is
+     deliberate: a real Strava export carries a TCX that starts that way. -->
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+  <Activities>
+    <Activity Sport="Biking">
+      <Id>2026-09-19T04:23:34Z</Id>
+      <Lap StartTime="2026-09-19T04:23:34Z">
+        <Track>
+          <Trackpoint>
+            <Time>2026-09-19T04:23:34Z</Time>
+            <Position><LatitudeDegrees>-10.0</LatitudeDegrees><LongitudeDegrees>-140.0</LongitudeDegrees></Position>
+            <AltitudeMeters>12.0</AltitudeMeters>
+            <HeartRateBpm><Value>120</Value></HeartRateBpm>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-09-19T04:23:44Z</Time>
+            <HeartRateBpm><Value>121</Value></HeartRateBpm>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-09-19T04:23:54Z</Time>
+            <Position><LatitudeDegrees>-10.0</LatitudeDegrees><LongitudeDegrees>-139.999</LongitudeDegrees></Position>
+            <AltitudeMeters>12.5</AltitudeMeters>
+          </Trackpoint>
+        </Track>
+      </Lap>
+      <Lap StartTime="2026-09-19T04:23:54Z">
+        <Track>
+          <Trackpoint>
+            <Time>2026-09-19T04:24:14Z</Time>
+            <Position><LatitudeDegrees>-10.0</LatitudeDegrees><LongitudeDegrees>-139.998</LongitudeDegrees></Position>
+            <AltitudeMeters>13.0</AltitudeMeters>
+          </Trackpoint>
+        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>

@@ -17,7 +17,17 @@ class Track
   # relative to its segment once it has been trimmed or read back from storage.
   Point = Data.define(:lon, :lat, :ele, :time)
 
+  # Messages name the part of a track that is wrong and never the value in it:
+  # the value is a coordinate.
   class Malformed < StandardError; end
+  class TooLarge < Malformed; end
+
+  READERS = { "gpx" => "Track::Gpx", "tcx" => "Track::Tcx", "fit" => "Track::Fit" }.freeze
+  FORMAT = /\A(gpx|tcx|fit)(\.gz)?\z/
+
+  # The most a track file may decompress to, counted as it is read: a header's
+  # claimed size is whatever whoever made the file wanted it to say.
+  LIMIT = 64.megabytes
 
   # Slower than this between two points is standing still, or GPS drift.
   MOVING_SPEED = 0.5 # m/s
@@ -31,12 +41,37 @@ class Track
     GeoJson.read(json)
   end
 
+  # A GPX, TCX or FIT file, any of them gzipped: `format` is "gpx", "fit.gz"
+  # and so on.
+  def self.read(io, format:, limit: LIMIT)
+    match = FORMAT.match(format.to_s) or raise ArgumentError, "not a track format Kith reads"
+
+    data = read_at_most(io, limit)
+    data = read_at_most(Zlib::GzipReader.new(StringIO.new(data)), limit) if match[2]
+
+    READERS.fetch(match[1]).constantize.read(data)
+  rescue Zlib::Error
+    raise Malformed, "not gzip"
+  end
+
+  def self.read_at_most(io, limit)
+    data = "".b
+    while (chunk = io.read(64.kilobytes))
+      data << chunk
+      raise TooLarge, "larger than #{limit} bytes" if data.bytesize > limit
+    end
+    data
+  end
+
   # Elevation and times are all or nothing: if any point lacks one, every point
   # loses it, so a stored track never has a position with elevation beside one
   # without.
   def initialize(segments)
     segments = segments.map(&:to_a).reject(&:empty?)
     points = segments.flatten
+    unless points.all? { |point| point.lat.to_f.between?(-90, 90) && point.lon.to_f.between?(-180, 180) }
+      raise Malformed, "a point is not a position"
+    end
     elevated = points.all?(&:ele)
     timed = points.all?(&:time)
 
