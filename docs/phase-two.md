@@ -629,6 +629,10 @@ Exports are cumulative; the next one is the whole history again.
   - **A workout never links to Strava.** The Strava activity shows the whole
     track and the true totals to whoever Strava lets see it, which undoes all
     of the above in one click. `uri` stays NULL; the id is in `external_id`.
+  - **The trim is versioned.** Its formulas are pinned so that Ruby, Swift
+    and Kotlin cut identically, and that definition is trim v1. Every workout
+    records the version that cut it, so a version found to be wrong is retired
+    and its tracks can be found, rather than being patched quietly.
   - **Changing the trim radius after publishing is a re-draw.** Published
     rides keep the old trim, new ones get the new, and the two sets of cut
     points together tell an attacker more than either does alone.
