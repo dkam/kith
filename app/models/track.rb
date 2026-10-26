@@ -77,11 +77,43 @@ class Track
     segments.sum { |segment| climb(segment.map(&:ele)) }.round(1)
   end
 
+  # Trim v1 — see Track::Trim, and test/fixtures/files/trim/README.md, which
+  # states the same steps for the phone apps:
+  #
+  # 1. A circle around the ride's first point and one around its last, to the
+  #    trim's radius, and one around each zone, to the zone's.
+  # 2. Drop every point strictly inside any circle, anywhere in the ride: a
+  #    ride that passes the door halfway round loses that pass too.
+  # 3. A dropped point ends a segment, so a trim leaves a gap rather than a
+  #    line through the house, and a segment of fewer than two points goes.
+  # 4. Times restart at 0 in each segment. An absolute time either side of a
+  #    gap would time the crossing of the zone, and a time is a distance.
+  def trim(trim, zones: [])
+    return self if empty?
+
+    first, last = points.first, points.last
+    circles = [ trim.circle_around(first.lat, first.lon), trim.circle_around(last.lat, last.lon) ] +
+      zones.map { |zone| trim.circle_around(zone.lat, zone.lon, zone.radius_m) }
+
+    kept = segments.flat_map { |segment|
+      segment.chunk { |point| circles.none? { |circle| circle.cover?(point) } || nil }.map(&:last)
+    }.select { |segment| segment.size >= 2 }
+
+    self.class.new(kept.map { |segment| from_zero(segment) })
+  end
+
   def to_geojson
     GeoJson.write(self)
   end
 
   private
+    def from_zero(segment)
+      return segment unless timed?
+
+      start = segment.first.time
+      segment.map { |point| point.with(time: (point.time - start).round) }
+    end
+
     def pairs(segment) = segment.each_cons(2)
 
     def metres(a, b) = Geo.distance_m(a.lat, a.lon, b.lat, b.lon)
