@@ -82,3 +82,6 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
 end
+# Parses activities.csv in a Strava export. A bundled gem since Ruby 3.4, so it
+# has to be named here for `require "csv"` to work under Bundler.
+gem "csv", "~> 3.3"

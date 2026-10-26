@@ -52,6 +52,9 @@ Beyond the Rails defaults, only:
   *"Error reporting"* below.
 - `rubyzip` — reads a Strava account export without extracting it (approved
   2026-10-26). FIT files are decoded by hand, in `Track::Fit`, not by a gem.
+- `csv` — parses a Strava export's `activities.csv` (approved 2026-10-26). A
+  bundled gem rather than a default one since Ruby 3.4, so under Bundler
+  `require "csv"` raises LoadError unless it is named in the Gemfile.
 
 **Ask before adding any other gem.**
 
