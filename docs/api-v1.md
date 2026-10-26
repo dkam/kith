@@ -74,6 +74,7 @@ web page.
 | 401 | `invalid_token` | sign in again |
 | 404 | `not_found` | no such thing, or not yours |
 | 409 | `published` | that workout is already published; nothing more to do |
+| 409 | `edited` | its owner edited that draft on the web; nothing more to do |
 | 413 | `too_large` | the body is over the cap. Permanent |
 | 422 | `invalid_workout`, `invalid_track` | the payload breaks a rule. Permanent: fix or keep locally, never retry |
 | 429 | `rate_limited` | back off; `Retry-After` says how long |
@@ -126,7 +127,7 @@ gains on the same day, because it signs in through the web page.
    { "token": "…",
      "device": { "id": 7, "name": "Dan's iPhone" },
      "actor": { "id": 1, "handle": "dkam", "display_name": "Dan" },
-     "trim": { "radius_m": 500, "bearing_deg": 211.4, "fraction": 0.37 } }
+     "trim": { "radius_m": 500, "bearing_deg": 211.4, "offset_m": 183.6 } }
    ```
 
    The token is shown **once**, here, and never again.
@@ -182,7 +183,9 @@ device_tokens
 
 `GET /api/v1/me` answers `{ device, actor, trim }` — the exchange's response
 without the token. The app calls it on launch: it proves the token still works,
-and it is where a changed trim radius reaches the phone.
+and it is where a changed trim radius reaches the phone. A radius may change
+because the offset is in metres, not a fraction of the radius, so the circle's
+centre stays where it was (`docs/phase-two.md` says why that matters).
 
 ---
 
@@ -195,9 +198,18 @@ trimmed part is reported** — distance, moving time and climb come from the
 trimmed track, and track times count from the start of each segment.
 
 The phone gets the member's parameters from the exchange and from `/me`:
-`{ radius_m, bearing_deg, fraction }`. **They are the same for every device a
+`{ radius_m, bearing_deg, offset_m }`. **They are the same for every device a
 member has**, so every trim of their rides draws the same circle. Alone, they
 say nothing about where anybody lives.
+
+The app trims **when it uploads**, not when the ride is saved, with the
+parameters from the latest `/me`. The raw track stays on the phone, so a ride
+recorded before the first sign-in is still cut with the member's offset.
+
+**What a trim leaves is pinned too**, as issue #1 has it, and the shared
+fixtures cover both cases: a segment left with fewer than 2 points is dropped,
+and a ride with nothing left is uploaded with **no `track` key** and the app's
+own figures, like an indoor ride. A distance with no geometry places nothing.
 
 **Where the trim runs is open question 1**, and it matters more than it looks,
 because trimming twice compounds. The server's end trim would centre on the
@@ -266,6 +278,12 @@ Content-Type: application/json
     identical.
   - `409 published` — that workout has been published; it is never touched
     again. The app marks it synced.
+  - `409 edited` — its owner has edited the draft on the web, and **the web
+    edit wins**: an edited draft is treated like a published one, and the
+    upload does not touch it. The app marks it synced. The common case of a
+    200, a retry after a lost response, sends identical bytes and is unaffected.
+    Nothing can edit a draft yet, so this answer arrives with the owner's
+    workout page, which records when it last edited one.
   - `422` — see *Validation*.
 - **The response never echoes the track.** It carries what was stored:
   `{ "workout": { "client_id", "occurred_at", "published", "data",
@@ -283,8 +301,8 @@ Content-Type: application/json
   server from the track**, as the importer does. Figures the app sends are
   ignored when there is a track — they would be the untrimmed totals, which is
   exactly the leak the trim exists to close. When there is **no** track (an
-  indoor ride), the app's figures are kept: there is no geometry for them to
-  place.
+  indoor ride, or one the trim removed entirely), the app's figures are kept:
+  there is no geometry for them to place.
 - `trim_version`, from the upload's `trim.version`.
 - No `elapsed_time_s`, and `uri` stays NULL.
 
@@ -301,8 +319,9 @@ every ride rejected, and permanently, for a field the server does not know yet.
   100.
 - `track`, if present:
   - a `Feature` whose geometry is a `MultiLineString`;
-  - every segment at least 2 positions; at most 1 000 segments and 200 000
-    positions in all;
+  - at least 1 segment, every segment at least 2 positions; at most 1 000
+    segments and 200 000 positions in all. A ride with nothing left is said
+    one way, by leaving `track` out, so an empty `MultiLineString` is a 422;
   - every position `[lon, lat]` or `[lon, lat, ele]`, **the same length
     throughout**; longitude in [−180, 180], latitude in [−90, 90], every number
     finite; rounded to 6 places on the way in;
@@ -350,6 +369,12 @@ every ride rejected, and permanently, for a field the server does not know yet.
 - **Checkins.** `PUT /api/v1/checkins/:client_id`, the same idempotent shape.
   Waits on the `Place` question in `docs/phase-two.md`. Never inferred: the
   phone may *offer* a checkin from a visit, and the member taps.
+- **Duplicates across sources.** One Garmin ride can reach Kith through the
+  Strava export and through the app's HealthKit backfill.
+  `(source_id, external_id)` cannot see that, and nothing is built for it.
+  Neither the importer nor the upload may assume it is the only way in, and
+  the owner's drafts may one day mark a *possible duplicate*
+  (`docs/phase-two.md`).
 - **Life-log summaries.** Motion totals (minutes cycling, walking) are
   `Measurement`s, the shape of `steps`. Place totals — time at home, time at
   work — never leave the phone: a daily series of arrivals at work is a
@@ -392,3 +417,9 @@ No new gems for any of it.
 4. **401 for a bad token**, rather than the 404 the MCP endpoint gives?
    Recommended: yes, for the reason above.
 5. **A 10 MB cap on an upload?** Generous by a factor of ten for a long ride.
+6. **What readers see of when a ride started.** `occurred_at` is stored to the
+   second, and to the second it is a departure timetable. Recommended: readers
+   see the day and a part of it (*"Sunday morning"*), in the author's time
+   zone, and only the owner sees the time (`docs/phase-two.md` → *Fitness*).
+   Nothing here changes either way; it binds the first page that shows a
+   workout to a reader.

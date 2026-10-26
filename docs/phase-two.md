@@ -590,7 +590,9 @@ Exports are cumulative; the next one is the whole history again.
   nobody has seen it, so nothing is lost. A known id that has been published is
   left alone. An id missing from the newer export was deleted on Strava: a
   draft goes with it, a published entry stays, because by then it is the
-  member's own, and deleting it would change what a reader already saw.
+  member's own, and deleting it would change what a reader already saw. Once
+  the owner's page can edit a draft, an edited draft is treated like a
+  published one: the owner's words win, and no source writes to it again.
 - **A trim makes a gap, not a shortcut.** Dropping the points inside a zone
   and joining the line across it draws a straight line through the house. A
   trimmed track is a list of segments, and a ride that never leaves its zones
@@ -633,9 +635,31 @@ Exports are cumulative; the next one is the whole history again.
     and Kotlin cut identically, and that definition is trim v1. Every workout
     records the version that cut it, so a version found to be wrong is retired
     and its tracks can be found, rather than being patched quietly.
-  - **Changing the trim radius after publishing is a re-draw.** Published
-    rides keep the old trim, new ones get the new, and the two sets of cut
-    points together tell an attacker more than either does alone.
+  - **The offset is stored in metres, so a new radius never moves the
+    centre.** Published rides keep the circle they were cut with, new ones
+    get the new radius about the same centre, and concentric circles fit no
+    better together than either does alone. An offset stored as a fraction of
+    the radius would slide the centre along the line from home as the radius
+    changed, and two such families of cut points would locate home exactly:
+    the two centres give the line, and the ratio of their separation to the
+    change in radius gives the fraction. The same is true of a zone whose
+    radius is changed on Strava between two imports, which Kith cannot
+    forbid. The cost is that a bigger radius pushes the visible track further
+    out without hiding the centre any better.
+- **When a ride started is a timetable.** `occurred_at` is kept to the
+  second, and its owner sees it that way. But to the second, on every ride
+  that leaves from home, it says *"leaves the house at 06:42 on weekdays"* —
+  the reason place totals never leave the phone. **Open, for dkam:** readers
+  see the day and a part of it (*"Sunday morning"*), in the author's time
+  zone, and only the owner sees the time. Nothing shows a workout to a reader
+  yet, so this binds whichever issue first does.
+- **One ride can arrive by two doors.** A Garmin ride synced to Strava and to
+  HealthKit comes in once through the export and once through the phone, and
+  `(source_id, external_id)` cannot see that. Nothing is built for it, but
+  nothing may assume it is the only way in either: the index on
+  `[actor_id, type, occurred_at]` is not unique, and stays that way. Later the
+  owner's drafts can mark a *possible duplicate* — the same type, starting
+  within two minutes, of a similar length — and the owner decides.
 - **Not everything in a row is a fact worth copying.** The summary keeps what
   the ride was — name and type from the row, and distance, moving time and
   climb from the trimmed track. `Athlete Weight` stays out
