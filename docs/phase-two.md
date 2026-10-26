@@ -311,7 +311,7 @@ a list of cards.
 | kind | source | note |
 |---|---|---|
 | Scrobble | last.fm, ListenBrainz | the volume case: ~50/day. Must never reach a feed |
-| Workout | Strava export, GPX/FIT | GPS payload, radius-trimmed on import. Arrives as a draft |
+| Workout | Strava export, GPX/FIT | GPS payload, stored whole, trimmed when shared. Arrives as a draft |
 | Checkin | Swarm-ish, typed | followers-only even where posts are public; consider a delay |
 | Reading | TBDB | three entries per book, not one mutable row |
 | Watching | Letterboxd | same shape as Reading, one event or three |
@@ -363,13 +363,17 @@ something in the world; the actor is the one who noted it.
 
 Two notes that only surface once checkins are real.
 
-**`StripMetadataJob` has already destroyed the GPS**, unconditionally and
-asynchronously, moments after the direct upload lands. So turning a photograph
-into a checkin cannot read the coordinate off the stored file — it has to be an
-**offer made in the composer, once, before the strip runs**, and discarded if
-not taken. The strip stays unconditional. Never infer a checkin, and never hold
-a coordinate because it might be wanted later: that is how a photograph of a
-child at home becomes a pin on the front door.
+**`StripMetadataJob` destroys the GPS in the file**, unconditionally and
+asynchronously, moments after the direct upload lands, and that stays: the
+file is what gets handed out. What changed (dkam, 2026-10-26, *"the only time
+to strip location is when sharing"*) is that **the location is read first and
+kept beside the file**, as the owner's fact — when and where it was taken,
+seen by its owner and by nobody else. So a checkin can be offered from a
+photograph at any time, not only in the composer before the strip runs. It is
+still never inferred: the member taps. And the location is never shown to a
+reader by default, because that is how a photograph of a child at home becomes
+a pin on the front door. Whether the friends who see a member's rides whole
+also see where their photographs were taken is a later question.
 
 Nor is it a *conversion*. A photograph and a checkin are two entries that one
 post attaches; conversion implies destroying one of them.
@@ -396,6 +400,9 @@ actually misses about checkins, so the table probably wins in the end — but
 - **A continuous location trace.** Not event-shaped, and the most dangerous
   data in the building. A checkin is a decision; a trace is surveillance. Kith
   strips GPS from photographs — it does not then collect it by the minute.
+  *Revisited 2026-10-26:* dkam would keep a life log on the server,
+  owner-only, behind the sharing gate and 2FA (see *Fitness*). How is not yet
+  designed.
 - **Your own blog's RSS.** That is a *post* by another actor of yours, reached
   through `actor_links`, not exhaust. The test is the one at the top of this
   document: somebody chose words and pressed publish.
@@ -534,13 +541,44 @@ also the kind most likely to want to leave the instance one day, to whatever
 public checkin service still exists — which is `leaves_the_instance?` on an
 entry, the same rule posts already obey.
 
-**Fitness** — **a ride is a GPS track of your house.** Kith already strips EXIF
-including GPS because location is dangerous; a ride is location as the entire
-payload, and every ride starts and ends at the front door. Trim by radius on
-import, default on, and store only the trimmed track — not a display filter
-over a full track that some later endpoint serves whole. Same instinct as
-`StripMetadataJob` rewriting the blob in place rather than keeping the original
-around.
+**Fitness** — **a ride is a GPS track of your house**, so what a reader gets
+depends on who they are. Decided with dkam, 2026-10-26: *the only time to strip
+location is when sharing.* Kith is its members' own store, so the full ride is
+kept, and its owner sees it whole. Sharing is where care starts:
+
+- **A ride is trimmed once, when it is first shared**, published or attached to
+  a post. The server cuts it, freezes the result as a second stored track, and
+  never cuts it again: not for a new radius, not for a new zone, because a
+  second cut is a second family of cut points. Every reader-facing path reads
+  that copy. It is a separate stored thing rather than a display filter over
+  the full track, so a path that forgets to filter has nothing to leak.
+- **Every share is trimmed, followers-only included**, because a followers-only
+  post is a screenshot away from anyone.
+- **A member names the friends who see their rides whole** (dkam: *"it's fine to
+  share GPS with some friends — for rides especially"*). One list per member,
+  set in settings and empty by default, not a choice made per share. A friend
+  on it sees the full ride wherever they are already in its audience; the list
+  never widens who sees the ride at all. `Visibility` answers it, with a
+  predicate and a scope cross-checked like posts.
+- **Every other exit gets the trimmed copy, whoever is asking**: MCP (an agent's
+  reading goes to a model provider, so this holds for the owner's own agent and
+  for a trusted friend's), error reports, logs, push payloads, and one day
+  federation and exports. The API never returns a track at all.
+- **No notice to members** (dkam, 2026-10-26): Kith is a handful of trusted
+  people, and the admin seeing their data is accepted.
+- **The same holds for every kind of location** (dkam, 2026-10-26: *"Kith as a
+  whole is a personal, private thing … the sharing process must be carefully
+  managed"*). A photograph's place, a checkin and a life log may all live on
+  the server, owner-only. The direction, not yet a design:
+  - **One sharing gate**, an object beside `Visibility` that every outward path
+    asks (feed, profiles, a post's attachments, MCP, exports, push, one day
+    `leaves_the_instance?`), deciding what form of a location leaves, per kind.
+    Predicate and scope tests, like `VisibilityTest`.
+  - **2FA on the web sign-in before a life log or a populated ride history goes
+    live.** A device token is minted through that sign-in, so it inherits it.
+  - **Active Record encryption on location columns** is worth its small cost
+    against a leaked database file or backup. It does not cover Active Storage
+    blobs, so a full track is not protected by it.
 
 **Strava arrives as an export, never through its API.** Decided 2026-10-26.
 The API agreement (effective 2026-06-01) says data a user provides *"can only
@@ -560,34 +598,36 @@ Exports are cumulative; the next one is the whole history again.
   the import finishes. Kith keeps entries, not the export.
 - **`Activity Private Note` never comes in.** It is Strava's owner-only field,
   and no audience Kith could give it would mean the same thing.
-- **The privacy zones are worth reading, and not worth keeping.** Trimming the
-  ends of a ride catches one that starts at home. It does not catch one that
-  passes the house halfway round, or starts at a partner's flat.
-  `privacy_zones.csv` is the member having already said where those places
-  are. Use it in memory during the import as a second trim, re-read from each
-  export, and never persisted. That is the same instinct as the composer's
-  one-time GPS offer. The end trim is the guarantee and the zones are the
-  extra: an export can carry none at all, and the first real one did not.
+- **Privacy zones are Kith's, held on the server.** Trimming the ends of a ride
+  catches one that starts at home. It does not catch one that passes the house
+  halfway round, or starts at a partner's flat; a zone does. The full tracks
+  already say where a member lives, so a stored list of zones adds little, and
+  it is one list for every importer and device. A zone records its `origin` —
+  `manual`, `imported` or `suggested` — and a suggestion (learned on the phone,
+  or from clusters of a member's starts and ends) is pending until its owner
+  confirms it: seen by nobody else, and trimming nothing until then. Zones
+  arrive with the issue that builds sharing, with a settings page, and an
+  export's `privacy_zones.csv` can seed them, keeping the centre and radius and
+  never the street address. The end trim is the guarantee and the zones are
+  the extra.
 - **Formats.** One real export held 320 `.gpx`, 10 `.gpx.gz`, 44 `.fit.gz` and
   1 `.tcx.gz` across 375 activities. GPX and TCX are XML, which Nokogiri
   already reads. FIT is binary and needs either a hand-written decoder or a
   gem, and a gem is an ask.
 - **Conformance runs against a real export that is never in the repository.**
   Tests find it through `KITH_STRAVA_EXPORT` and skip without it; the committed
-  fixtures are synthetic. The original file is the test's answer key: no
-  stored point lies within the guaranteed margin of either end of the ride as
-  recorded, nor inside any zone the export names. Failure messages name
-  activity ids, never coordinates.
-- **The zip is the only way in, and running it again is how new rides
-  arrive.** Not single activity files as well: a lone GPX comes without
-  `privacy_zones.csv`, so a ride added that way would be trimmed at its ends
-  and nowhere else, and the one that passes the house halfway round would go
-  through whole. Single files can come when Kith holds privacy zones of its
-  own, which the phone app needs anyway.
+  fixtures are synthetic. The original file is the test's answer key twice
+  over: the stored track is the recorded one, point for point at six places,
+  and the trim, run over every ride, leaves nothing within the guaranteed
+  margin of either recorded end. Failure messages name activity ids, never
+  coordinates.
+- **The zip is the only way in for now, and running it again is how new rides
+  arrive.** Single activity files can follow; once zones are Kith's own, a lone
+  GPX is trimmed as well as one from an export.
 - **A re-run mirrors Strava only where no reader has looked.** A new activity
   id is a new draft. A known id that is still a draft is rebuilt from the new
-  file, so a rename, a corrected type or a changed trim radius all land —
-  nobody has seen it, so nothing is lost. A known id that has been published is
+  file, so a rename or a corrected type lands — nobody else has seen it, so
+  nothing is lost. A known id that has been published is
   left alone. An id missing from the newer export was deleted on Strava: a
   draft goes with it, a published entry stays, because by then it is the
   member's own, and deleting it would change what a reader already saw. Once
@@ -596,7 +636,7 @@ Exports are cumulative; the next one is the whole history again.
 - **A trim makes a gap, not a shortcut.** Dropping the points inside a zone
   and joining the line across it draws a straight line through the house. A
   trimmed track is a list of segments, and a ride that never leaves its zones
-  has no track at all.
+  is shared with no track at all.
 - **A trim must not leak what it removed.** Two papers, two lessons.
   - Hassan, Hussain and Bates (*"You can run, but can you hide?"*, USENIX
     Security 2018): with a circle centred on home, the cut points of a handful
@@ -607,10 +647,8 @@ Exports are cumulative; the next one is the whole history again.
     distance and bearing away from the ride's own first point, so the fitted
     centre lands somewhere that is not home. It is per member, random, and
     **stored** on `members` beside the radius. It is not a location, so
-    storing it costs nothing. It is handed to the member's phones, so every
-    trim of their rides, wherever it runs, uses the same circle: two devices
-    with two offsets would be two families of cut points, the re-draw problem
-    across devices instead of over time. It is never re-drawn, because
+    storing it costs nothing. Only the server trims, so every trim of a
+    member's rides uses the same circle. It is never re-drawn, because
     re-drawing gives an attacker more cut points. For the same reason it is
     not derived from `secret_key_base`, since rotating that after a leak is
     exactly when nobody would think of it.
@@ -621,22 +659,23 @@ Exports are cumulative; the next one is the whole history again.
     street grid found up to 85% of protected locations, against Strava's
     current randomised, off-centre zones. The countermeasure they found to
     work outright is to report nothing about the hidden part. They objected
-    only on behalf of leaderboards, and Kith has none. So a workout's
-    distance, moving time and climb are **computed from the trimmed track**,
-    never copied from Strava. Track times count from the start of each
-    segment, so neither end, nor the gap across a zone, can be timed. A
-    member's true totals stay in Strava. A ride with no track left — indoors,
-    or entirely inside its zones — keeps Strava's numbers, since there is no
-    geometry for them to place.
+    only on behalf of leaderboards, and Kith has none. So the trimmed copy's
+    distance, moving time and climb are **computed from its trimmed track**,
+    never copied from the source; the owner, and the friends who see the ride
+    whole, see the source's own figures. Track times count from the start of
+    each segment, so neither end, nor the gap across a zone, can be timed. A
+    ride with no track left — indoors, or entirely inside its zones — is
+    shared with the source's numbers, since there is no geometry for them to
+    place.
   - **A workout never links to Strava.** The Strava activity shows the whole
     track and the true totals to whoever Strava lets see it, which undoes all
     of the above in one click. `uri` stays NULL; the id is in `external_id`.
-  - **The trim is versioned.** Its formulas are pinned so that Ruby, Swift
-    and Kotlin cut identically, and that definition is trim v1. Every workout
-    records the version that cut it, so a version found to be wrong is retired
-    and its tracks can be found, rather than being patched quietly.
+  - **The trim is versioned.** Its formulas are pinned, and that definition is
+    trim v1. Every trimmed copy records the version that cut it, so a version
+    found to be wrong is retired and its copies can be found, rather than
+    being patched quietly.
   - **The offset is stored in metres, so a new radius never moves the
-    centre.** Published rides keep the circle they were cut with, new ones
+    centre.** Shared rides keep the circle they were cut with, new ones
     get the new radius about the same centre, and concentric circles fit no
     better together than either does alone. An offset stored as a fraction of
     the radius would slide the centre along the line from home as the radius
@@ -646,13 +685,11 @@ Exports are cumulative; the next one is the whole history again.
     radius is changed on Strava between two imports, which Kith cannot
     forbid. The cost is that a bigger radius pushes the visible track further
     out without hiding the centre any better.
-- **When a ride started is a timetable.** `occurred_at` is kept to the
-  second, and its owner sees it that way. But to the second, on every ride
-  that leaves from home, it says *"leaves the house at 06:42 on weekdays"* —
-  the reason place totals never leave the phone. **Open, for dkam:** readers
-  see the day and a part of it (*"Sunday morning"*), in the author's time
-  zone, and only the owner sees the time. Nothing shows a workout to a reader
-  yet, so this binds whichever issue first does.
+- **Readers see when a ride started, exactly** (dkam, 2026-10-26). To the
+  second, on every ride that leaves from home, it says *"leaves the house at
+  06:42 on weekdays"*; that was weighed and accepted for an audience of
+  friends. A per-share option to coarsen it (*"Sunday morning"*) may come
+  later.
 - **One ride can arrive by two doors.** A Garmin ride synced to Strava and to
   HealthKit comes in once through the export and once through the phone, and
   `(source_id, external_id)` cannot see that. Nothing is built for it, but
@@ -661,8 +698,8 @@ Exports are cumulative; the next one is the whole history again.
   owner's drafts can mark a *possible duplicate* — the same type, starting
   within two minutes, of a similar length — and the owner decides.
 - **Not everything in a row is a fact worth copying.** The summary keeps what
-  the ride was — name and type from the row, and distance, moving time and
-  climb from the trimmed track. `Athlete Weight` stays out
+  the ride was — name, type, distance, moving time and climb from the row, and
+  for a trimmed copy those three numbers from its track. `Athlete Weight` stays out
   for the reason weight is never publishable, and heart rate and calories wait
   until there is a renderer that has thought about health data.
 
