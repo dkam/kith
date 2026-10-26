@@ -50,6 +50,8 @@ Beyond the Rails defaults, only:
 - `sentry-rails` — optional error reporting (approved 2026-09-16). Inert unless
   `SENTRY_DSN` is set; what may leave is `ErrorReport`'s decision. See
   *"Error reporting"* below.
+- `rubyzip` — reads a Strava account export without extracting it (approved
+  2026-10-26). FIT files are decoded by hand, in `Track::Fit`, not by a gem.
 
 **Ask before adding any other gem.**
 
