@@ -13,6 +13,7 @@ class Member < ApplicationRecord
   has_many :feed_items, dependent: :delete_all
   has_many :mcp_tokens, dependent: :destroy
   has_many :notifications, dependent: :delete_all
+  has_many :sources, dependent: :destroy
   has_many :invited_members, class_name: "Member", foreign_key: :inviter_member_id, dependent: :nullify
 
   accepts_nested_attributes_for :actor
@@ -27,6 +28,16 @@ class Member < ApplicationRecord
   enum :role, { member: 0, moderator: 5, admin: 10, owner: 20 },
     default: :member, validate: { message: "is not a valid role" }
 
+  # How this member's rides are trimmed — see Track::Trim. The offset is drawn
+  # once, at random, and never again: a re-drawn offset is a second set of cut
+  # points around a second centre, and the two together point at home. The
+  # radius may change: the offset is in metres, so the new circles share the old
+  # centre. A shared copy is frozen, so a new radius reaches only rides first
+  # shared after it.
+  attribute :trim_bearing_deg, default: -> { SecureRandom.random_number * 360 }
+  attribute :trim_offset_m, default: -> { 125 + SecureRandom.random_number * 125 }
+  attr_readonly :trim_bearing_deg, :trim_offset_m
+
   normalizes :email_address, with: ->(e) { e.to_s.strip.downcase }
   normalizes :time_zone, with: ->(name) { name.presence }
 
@@ -37,6 +48,7 @@ class Member < ApplicationRecord
   # would otherwise take down every request the member made.
   validates :time_zone, inclusion: { in: ActiveSupport::TimeZone::MAPPING.keys, message: "is not a time zone Kith knows" },
     allow_nil: true
+  validates :trim_radius_m, numericality: { only_integer: true, greater_than: 0 }
   validate :an_owner_remains, on: :update
 
   delegate :handle, :display_name, :discoverable, to: :actor
@@ -46,6 +58,8 @@ class Member < ApplicationRecord
   # the validation existed, or written straight to the column, must not be able
   # to break a page.
   def zone = ActiveSupport::TimeZone[time_zone.to_s] || Time.zone
+
+  def trim = Track::Trim.new(radius_m: trim_radius_m, bearing_deg: trim_bearing_deg, offset_m: trim_offset_m)
 
   # Ranks compare, so `administers?` is true of the owner as well as an admin.
   # Ask these rather than `admin?`: a check written against one exact role is a

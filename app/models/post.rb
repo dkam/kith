@@ -6,9 +6,9 @@ class Post < ApplicationRecord
   PHOTO_LIMIT = 20
 
   # Chosen while it is a draft, fixed once it is published, and never changed
-  # after that: see audience_is_immutable. Circles
-  # will be added here, which is why the enum is integer-backed and sparse.
-  enum :audience, { followers: 0, public: 10 }, prefix: true, validate: true
+  # after that: see audience_is_immutable. The values themselves are Audience's,
+  # shared with entries.
+  include Audience
 
   belongs_to :actor
 

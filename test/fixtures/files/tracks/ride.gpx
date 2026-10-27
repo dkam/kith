@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Invented: a ride in the open Pacific, 10° S 140° W, in two segments. -->
+<gpx creator="Kith tests" version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <time>2026-09-19T04:23:34Z</time>
+  </metadata>
+  <wpt lat="-10.5" lon="-140.5"><name>Not part of the track</name></wpt>
+  <trk>
+    <name>Morning Ride</name>
+    <type>cycling</type>
+    <trkseg>
+      <trkpt lat="-10.0000000" lon="-140.0000000"><ele>12.0</ele><time>2026-09-19T04:23:34Z</time></trkpt>
+      <trkpt lat="-10.0000000" lon="-139.9990000"><ele>12.4</ele><time>2026-09-19T04:23:54Z</time></trkpt>
+      <trkpt lat="-10.0000000" lon="-139.9980000"><ele>13.1</ele><time>2026-09-19T04:24:14Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <trkpt lat="-10.0000000" lon="-139.9900000"><ele>15.0</ele><time>2026-09-19T04:30:00Z</time></trkpt>
+      <trkpt lat="-10.0000000" lon="-139.9890000"><ele>15.5</ele><time>2026-09-19T04:30:20Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

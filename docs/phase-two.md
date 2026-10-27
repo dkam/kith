@@ -580,24 +580,14 @@ kept, and its owner sees it whole. Sharing is where care starts:
     against a leaked database file or backup. It does not cover Active Storage
     blobs, so a full track is not protected by it.
 
-**Strava arrives as an export, never through its API.** Decided 2026-10-26.
-The API agreement (effective 2026-06-01) says data a user provides *"can only
-be displayed or disclosed in your Developer Application to that user"*, which
-rules out the one thing Kith exists to do with a ride, and a new API app can
-connect a single athlete until Strava reviews it. A member's own account export
-is the member's own file, and importing it is the same act as uploading a GPX
-off a Garmin. So the Strava source holds no credential at all: it is a
-`sources` row with a kind and no secret, there so that `(source_id,
-external_id)` — the Strava activity id — makes the next import idempotent.
-Exports are cumulative; the next one is the whole history again.
+**The Strava export and the trim were built 2026-10-27** (kith-web#1). What
+stood here — an export rather than the API, and why; reading it by
+allowlist; running it again; the whole ride kept for its owner; the trim as
+a gap; the off-centre circle with a stored offset in metres, and the two
+papers behind it; relative times; no link out; the pinned, versioned
+formulas — now lives in `CLAUDE.md`, *"Strava export, and the trim"*, which
+holds the rules. What follows is still to build, with sharing.
 
-- **An export is the whole account**, not just the activities: logins,
-  messages, device identifiers, followers, and privacy zones with street
-  addresses in them. The importer reads `activities.csv`, `activities/` and
-  `media/` by allowlist and nothing else, and the uploaded zip is purged when
-  the import finishes. Kith keeps entries, not the export.
-- **`Activity Private Note` never comes in.** It is Strava's owner-only field,
-  and no audience Kith could give it would mean the same thing.
 - **Privacy zones are Kith's, held on the server.** Trimming the ends of a ride
   catches one that starts at home. It does not catch one that passes the house
   halfway round, or starts at a partner's flat; a zone does. The full tracks
@@ -610,81 +600,6 @@ Exports are cumulative; the next one is the whole history again.
   export's `privacy_zones.csv` can seed them, keeping the centre and radius and
   never the street address. The end trim is the guarantee and the zones are
   the extra.
-- **Formats.** One real export held 320 `.gpx`, 10 `.gpx.gz`, 44 `.fit.gz` and
-  1 `.tcx.gz` across 375 activities. GPX and TCX are XML, which Nokogiri
-  already reads. FIT is binary and needs either a hand-written decoder or a
-  gem, and a gem is an ask.
-- **Conformance runs against a real export that is never in the repository.**
-  Tests find it through `KITH_STRAVA_EXPORT` and skip without it; the committed
-  fixtures are synthetic. The original file is the test's answer key twice
-  over: the stored track is the recorded one, point for point at six places,
-  and the trim, run over every ride, leaves nothing within the guaranteed
-  margin of either recorded end. Failure messages name activity ids, never
-  coordinates.
-- **The zip is the only way in for now, and running it again is how new rides
-  arrive.** Single activity files can follow; once zones are Kith's own, a lone
-  GPX is trimmed as well as one from an export.
-- **A re-run mirrors Strava only where no reader has looked.** A new activity
-  id is a new draft. A known id that is still a draft is rebuilt from the new
-  file, so a rename or a corrected type lands — nobody else has seen it, so
-  nothing is lost. A known id that has been published is
-  left alone. An id missing from the newer export was deleted on Strava: a
-  draft goes with it, a published entry stays, because by then it is the
-  member's own, and deleting it would change what a reader already saw. Once
-  the owner's page can edit a draft, an edited draft is treated like a
-  published one: the owner's words win, and no source writes to it again.
-- **A trim makes a gap, not a shortcut.** Dropping the points inside a zone
-  and joining the line across it draws a straight line through the house. A
-  trimmed track is a list of segments, and a ride that never leaves its zones
-  is shared with no track at all.
-- **A trim must not leak what it removed.** Two papers, two lessons.
-  - Hassan, Hussain and Bates (*"You can run, but can you hide?"*, USENIX
-    Security 2018): with a circle centred on home, the cut points of a handful
-    of rides all sit on it, and fitting a circle to them finds the front door.
-    Randomising the radius per ride does not help. The points scatter across
-    a band, but the band is still centred on home. What moves the centre is an
-    **offset that never changes**: the trim circle is centred a secret, fixed
-    distance and bearing away from the ride's own first point, so the fitted
-    centre lands somewhere that is not home. It is per member, random, and
-    **stored** on `members` beside the radius. It is not a location, so
-    storing it costs nothing. Only the server trims, so every trim of a
-    member's rides uses the same circle. It is never re-drawn, because
-    re-drawing gives an attacker more cut points. For the same reason it is
-    not derived from `secret_key_base`, since rotating that after a leak is
-    exactly when nobody would think of it.
-  - Dhondt, Le Pochat et al. (*"A Run a Day Won't Keep the Hacker Away"*, CCS
-    2022): the stronger attack does not need the circle at all. It needs the
-    distance covered inside it, which leaks from the reported total against
-    the visible track, and from timestamps. With that, regression on the
-    street grid found up to 85% of protected locations, against Strava's
-    current randomised, off-centre zones. The countermeasure they found to
-    work outright is to report nothing about the hidden part. They objected
-    only on behalf of leaderboards, and Kith has none. So the trimmed copy's
-    distance, moving time and climb are **computed from its trimmed track**,
-    never copied from the source; the owner, and the friends who see the ride
-    whole, see the source's own figures. Track times count from the start of
-    each segment, so neither end, nor the gap across a zone, can be timed. A
-    ride with no track left — indoors, or entirely inside its zones — is
-    shared with the source's numbers, since there is no geometry for them to
-    place.
-  - **A workout never links to Strava.** The Strava activity shows the whole
-    track and the true totals to whoever Strava lets see it, which undoes all
-    of the above in one click. `uri` stays NULL; the id is in `external_id`.
-  - **The trim is versioned.** Its formulas are pinned, and that definition is
-    trim v1. Every trimmed copy records the version that cut it, so a version
-    found to be wrong is retired and its copies can be found, rather than
-    being patched quietly.
-  - **The offset is stored in metres, so a new radius never moves the
-    centre.** Shared rides keep the circle they were cut with, new ones
-    get the new radius about the same centre, and concentric circles fit no
-    better together than either does alone. An offset stored as a fraction of
-    the radius would slide the centre along the line from home as the radius
-    changed, and two such families of cut points would locate home exactly:
-    the two centres give the line, and the ratio of their separation to the
-    change in radius gives the fraction. The same is true of a zone whose
-    radius is changed on Strava between two imports, which Kith cannot
-    forbid. The cost is that a bigger radius pushes the visible track further
-    out without hiding the centre any better.
 - **Readers see when a ride started, exactly** (dkam, 2026-10-26). To the
   second, on every ride that leaves from home, it says *"leaves the house at
   06:42 on weekdays"*; that was weighed and accepted for an audience of

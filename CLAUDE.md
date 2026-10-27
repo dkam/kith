@@ -50,6 +50,11 @@ Beyond the Rails defaults, only:
 - `sentry-rails` — optional error reporting (approved 2026-09-16). Inert unless
   `SENTRY_DSN` is set; what may leave is `ErrorReport`'s decision. See
   *"Error reporting"* below.
+- `rubyzip` — reads a Strava account export without extracting it (approved
+  2026-10-26). FIT files are decoded by hand, in `Track::Fit`, not by a gem.
+- `csv` — parses a Strava export's `activities.csv` (approved 2026-10-26). A
+  bundled gem rather than a default one since Ruby 3.4, so under Bundler
+  `require "csv"` raises LoadError unless it is named in the Gemfile.
 
 **Ask before adding any other gem.**
 
@@ -130,6 +135,86 @@ These are design decisions, not suggestions.
 - **Opting onto the web is a one-way door**, so it is never the default. Once
   crawled, unpublishing is theatre.
 
+### Strava export, and the trim
+
+Phase two's first piece (kith-web#1, 2026-10-27). `docs/phase-two.md`,
+*Fitness*, holds what is still to build — sharing, zones, the friends who see
+a ride whole.
+
+- **Strava arrives as an export, never through its API.** The API agreement
+  lets data be shown only to the athlete it belongs to, which rules out the
+  one thing Kith exists to do with a ride. A member's own export is their own
+  file. So the `strava_export` source holds no credential: it is there so
+  that `(source_id, external_id)` — the activity id — makes the next import
+  idempotent. `StravaExport.new(member:, path:).import`, or
+  `kith:strava_import` from the console.
+- **Zip only, and running it again is how new rides arrive.** Exports are
+  cumulative. A new id is a new draft; a known draft is rebuilt from the new
+  row and file, and written only if something differs; a published workout
+  is never touched; a draft whose id has gone from a cleanly parsed CSV is
+  destroyed, track and all, and a published one stays, because a reader has
+  seen it.
+- **Read by allowlist.** `activities.csv`, and the `activities/` files its
+  `Filename` column names — `\Aactivities/\d+\.(gpx|tcx|fit)(\.gz)?\z` and
+  nothing else. Every other entry is never opened: an export is the whole
+  account, with logins, messages, device ids, followers and privacy zones
+  with street addresses in them. Nothing is extracted to disk, and every
+  entry is capped at 64 MB *as it is read*, inner gzip included.
+- **Fail closed.** Anything wrong with the CSV as a whole — a column missing
+  or doubled, no rows, a blank, non-numeric or repeated id — refuses the
+  import before anything is written. One bad activity is reported in
+  `failed` as `[activity id, exception class]`, never a message, and gets no
+  partial entry.
+- **`data` is exactly** `name`, `activity_type` (Kith's own vocabulary,
+  `Workout::ACTIVITY_TYPES`), `source_activity_type`, and Strava's own
+  `distance_m`, `moving_time_s` and `elevation_gain_m`. Never the private
+  note, weight, heart rate, calories, description, gear or weather.
+  `Workout` refuses any other key.
+- **The whole ride is kept, for its owner** (dkam: *"the only time to strip
+  location is when sharing"*). `Workout#full_track` is every point, rounded to
+  six places, as GeoJSON; the name is so that no view reaches for
+  `workout.track` and renders the owner's copy to a reader. Nothing serves it
+  yet: no route, no MCP tool, no coordinates in an error or the rake task's
+  output. When something does, it goes through the media rules and
+  `Visibility`. The original file is never kept.
+- **No link out.** `uri` is NULL on every workout: the Strava activity shows
+  the whole track and the true totals. The id is in `external_id`.
+- **The stored track** is a GeoJSON Feature: a MultiLineString, one line per
+  segment, with `properties.times` parallel to it in whole seconds **since
+  that segment's first point** — never absolute, because on a trimmed copy an
+  absolute time would time the cut, and a time is a distance. Elevation, or
+  `times`, is left out of the whole track if any point lacks it.
+- **A trim makes a gap, not a shortcut.** `Track#trim` drops every point
+  inside a circle *anywhere* in the ride, ends a segment there, and drops any
+  segment left with fewer than two points. Joining across would draw a line
+  through the house.
+- **The trim circle is off-centre, by an offset that never changes.** With a
+  circle centred on home, the cut points of a few rides all sit on it and a
+  circle fitted to them finds the front door (Hassan, Hussain and Bates,
+  USENIX Security 2018); a random radius per ride does not help. So each
+  circle is centred `members.trim_offset_m` metres along
+  `members.trim_bearing_deg` from the point it protects, with radius
+  R + offset, so nothing within R survives and the centre is not home. The
+  offset is random per member, **stored** and `attr_readonly`, because a
+  second offset is a second family of cut points; not derived from
+  `secret_key_base`, because rotating that after a leak would quietly re-draw
+  every one. It is in **metres, not a fraction of R**: with a fraction, a new
+  radius slides the centre along the line from home, and two families of cut
+  points then locate it exactly. In metres the circles are concentric, and
+  fit no better together than apart — which also covers a Strava zone whose
+  radius changes between imports.
+- **What was cut must not be measurable.** The stronger attack (Dhondt, Le
+  Pochat et al., CCS 2022) needs only the distance inside the circle, from
+  the reported total against the visible track, or from timestamps. So a
+  trimmed copy's figures will come from its trimmed track (`Track#distance_m`
+  and friends), never from Strava's; only the owner sees Strava's.
+- **The trim is pinned and versioned.** The formulas are in `Track::Geo` and
+  `Track#trim`, and they are `Track::Trim::VERSION` 1: change one and it is a
+  new version, never a fix. The shared copy will record its version. The
+  fixtures in `test/fixtures/files/trim/` were answered by an independent
+  Python implementation; do not edit one to make Ruby pass.
+
+
 ---
 
 ## Schema shape (federation-ready)
@@ -145,6 +230,8 @@ Integer primary keys. Don't reach for UUIDs.
   ranked enum `member` / `moderator` / `admin` / `owner` — see `Authority` —
   `invite_allowance` is how many people they may bring in, and `time_zone` is
   where they read from (nullable: the instance's clock until they say).
+  `trim_radius_m`, `trim_bearing_deg` and `trim_offset_m` are how their rides
+  are trimmed when shared; the last two are random, set once and read-only.
 - **`posts`** — `belongs_to :actor`; `title` (optional), `audience` enum,
   `published_at` (**nullable: NULL is a draft**), `uri` (nullable now; will hold
   the ActivityPub id), `remote` boolean. The body is **not** a column: `has_rich_text :body` puts it in
@@ -170,6 +257,15 @@ Integer primary keys. Don't reach for UUIDs.
   `read_write`, integer-backed and sparse so narrower grants fit between them,
   and it is **fixed at issue** — a token handed out as read-only never quietly
   becomes able to write. To change it, revoke and reissue.
+- **`sources`** — `member_id`, `kind` (sparse enum: `strava_export`), `config`
+  JSON, `last_imported_at`. A member's account on a service, one per kind.
+  On members, because only local people hold accounts.
+- **`entries`** — STI (`Workout`), `actor_id`, `occurred_at` (when it
+  happened, not when it arrived), `published_at` (**NULL is a draft**, as for
+  posts), `audience` (the same `Audience` concern as posts), `source_id` and
+  `external_id` (unique together; a NULL source never collides), `uri`, and
+  `data` JSON for the kind's own facts. The emitted record, as against the
+  written one — see `docs/phase-two.md`, *The shape*.
 
 ### Deviations from the original brief, and why
 
@@ -455,6 +551,7 @@ bin/rails kith:invites      # the door, the cap, everyone's allowance
 bin/rails kith:door[closed] # open | closed
 bin/rails kith:member_cap[40]          # pass nothing to lift it
 bin/rails kith:allowance[email,10]
+bin/rails "kith:strava_import[email,/path/to/export.zip]"   # counts and ids only
 bin/build              # build + push the image, and tag the release
 
 # forgotten password — from bin/rails console, or bin/rails runner
@@ -580,10 +677,34 @@ was v1.7.8 — eight releases with no commit you could check out.
 **Not in phase 1**: federation, ActivityPub, RSS ingest, circles, likes,
 passkeys, OIDC, search, DMs.
 
+**Phase two began 2026-10-26** with the Strava export importer (kith-web#1):
+sources, entries, `Workout` and `Track`. See *"Strava export, and the trim"*
+above, and `docs/phase-two.md` for what is designed but not yet built.
+
 ---
 
 ## Things that will bite you
 
+- **Strava's `activities.csv` repeats its headers.** Distance, Elapsed Time,
+  Max Heart Rate, Relative Effort and Commute each appear twice: first in
+  display units (Distance in km), then in SI (metres, seconds).
+  `CSV.parse(headers: true)` hands back the first, which is wrong.
+  `StravaExport` resolves columns by name, takes the last Distance, and
+  refuses the import if Distance is not there exactly twice or any other
+  column it reads is not there exactly once.
+- **A real export's TCX has whitespace before `<?xml`**, which a strict
+  parser refuses. `Track::Xml` strips it.
+- **A GPX may hold a one-point segment; a MultiLineString may not.** `Track`
+  joins a lone point to the next segment, or the one before if it is last,
+  as it is built. Dropping it would lose where the ride may have begun, and
+  move the trim's start circle; keeping it alone would write a track
+  `Track.from_geojson` then refuses.
+- **`full_track` is its owner's alone**, and the whole ride: it is a GPS trace
+  of their house. Never render it, return it from MCP or an API, or print a
+  coordinate from it. A reader will get the trimmed copy, which sharing adds.
+- **Never print a name, a coordinate or a zone** from an import — not in a
+  log, an exception message, the rake task's output, or a test's failure
+  message. Activity ids only. An `assert_equal` on two tracks prints both.
 - **Development runs the same four SQLite files as production**, and the same
   solid_queue / solid_cache / solid_cable stores. Jobs do not run unless
   something is working the queue: use `bin/dev`, not a bare `bin/rails server`,

@@ -26,6 +26,7 @@ class Actor < ApplicationRecord
 
   has_many :posts, dependent: :destroy
   has_many :comments, dependent: :destroy
+  has_many :entries, dependent: :destroy
 
   has_many :outgoing_follows, class_name: "Follow", foreign_key: :follower_actor_id, dependent: :destroy
   has_many :incoming_follows, class_name: "Follow", foreign_key: :followed_actor_id, dependent: :destroy

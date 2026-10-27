@@ -3,6 +3,8 @@ alice:
   email_address: alice@example.com
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   role: owner
+  trim_bearing_deg: 211.4
+  trim_offset_m: 187.5
 
 bob:
   actor: bob
@@ -10,6 +12,8 @@ bob:
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: alice
   role: member
+  trim_bearing_deg: 33.0
+  trim_offset_m: 140.0
 
 carol:
   actor: carol
@@ -17,6 +21,8 @@ carol:
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: alice
   role: member
+  trim_bearing_deg: 305.2
+  trim_offset_m: 230.0
 
 dave:
   actor: dave
@@ -24,16 +30,21 @@ dave:
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: bob
   role: member
+  trim_bearing_deg: 118.9
+  trim_offset_m: 162.3
 
 # mo and ada hold roles so the privacy fixtures above don't have to. Neither
 # follows anyone and nobody follows them: a role must be worth nothing to a
 # reader, and these two are how the tests prove it.
+
 mo:
   actor: mo
   email_address: mo@example.com
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: alice
   role: moderator
+  trim_bearing_deg: 74.6
+  trim_offset_m: 201.1
 
 ada:
   actor: ada
@@ -41,9 +52,13 @@ ada:
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: alice
   role: admin
+  trim_bearing_deg: 260.0
+  trim_offset_m: 128.4
 
 erin:
   actor: erin
   email_address: erin@example.com
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   inviter_member: alice
+  trim_bearing_deg: 152.7
+  trim_offset_m: 249.0

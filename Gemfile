@@ -54,6 +54,9 @@ gem "sentry-rails"
 # The official Ruby MCP SDK, for the per-member endpoint an agent connects to
 # [https://github.com/modelcontextprotocol/ruby-sdk]
 gem "mcp", "~> 1.5"
+# Reads a member's Strava account export, entry by entry and without
+# extracting it — see StravaExport [https://github.com/rubyzip/rubyzip]
+gem "rubyzip", "~> 3.6"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
@@ -79,3 +82,6 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
 end
+# Parses activities.csv in a Strava export. A bundled gem since Ruby 3.4, so it
+# has to be named here for `require "csv"` to work under Bundler.
+gem "csv", "~> 3.3"

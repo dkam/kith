@@ -1,0 +1,51 @@
+{
+  "description": "A 209 m ride, five points, wholly inside the start circle (R = 500 m). No track survives, so expected is null.",
+  "trim": {
+    "radius_m": 500,
+    "bearing_deg": 123.0,
+    "offset_m": 125.0
+  },
+  "zones": [],
+  "input": {
+    "type": "Feature",
+    "geometry": {
+      "type": "MultiLineString",
+      "coordinates": [
+        [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.00047,
+            0.0
+          ],
+          [
+            0.00094,
+            0.0
+          ],
+          [
+            0.00141,
+            0.0
+          ],
+          [
+            0.00188,
+            0.0
+          ]
+        ]
+      ]
+    },
+    "properties": {
+      "times": [
+        [
+          1790000000,
+          1790000010,
+          1790000020,
+          1790000030,
+          1790000040
+        ]
+      ]
+    }
+  },
+  "expected": null
+}

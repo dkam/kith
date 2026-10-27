@@ -101,4 +101,25 @@ namespace :kith do
 
     puts "@#{member.handle}: #{member.invites_left} of #{member.invite_allowance} left"
   end
+  desc "Import a Strava account export as draft workouts (kith:strava_import[email,/path/to/export.zip])"
+  task :strava_import, %i[ identifier path ] => :environment do |_task, args|
+    usage = "Usage: rake \"kith:strava_import[someone@example.com,/path/to/export.zip]\""
+
+    identifier = args[:identifier].presence || abort(usage)
+    path = args[:path].presence || abort(usage)
+    abort "No file at that path." unless File.file?(path)
+
+    member = Member.find_by_identifier!(identifier)
+    # Counts and activity ids only: a name or a coordinate never reaches the
+    # console. The zip is left where it is; it belongs to whoever ran this.
+    result = StravaExport.new(member:, path:).import
+
+    puts "#{result.created} created, #{result.updated} updated, #{result.unchanged} unchanged, " \
+      "#{result.removed} removed, #{result.failed.size} failed"
+    result.failed.each { |id, error| puts "  failed: #{id} (#{error})" }
+  rescue ActiveRecord::RecordNotFound
+    abort "No member with that email address or handle."
+  rescue StravaExport::Refused => e
+    abort "Refused, and nothing was imported: #{e.message}"
+  end
 end
