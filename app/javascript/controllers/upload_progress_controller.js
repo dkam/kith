@@ -6,11 +6,26 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["status"]
 
+  start() {
+    this.failed = false
+    this.statusTarget.textContent = "Uploading."
+  }
+
   progress(event) {
     this.statusTarget.textContent = `Uploading: ${Math.round(event.detail.progress)}%`
   }
 
+  // Active Storage sends end after error as well, so it must not undo it.
   end() {
-    this.statusTarget.textContent = "Uploaded. Starting the import."
+    if (!this.failed) this.statusTarget.textContent = "Uploaded. Starting the import."
+  }
+
+  // Active Storage alerts the error unless this is prevented, and a large
+  // upload cut off by a proxy would end in a browser dialog. The error itself
+  // says nothing a member can act on, so it is not shown.
+  error(event) {
+    event.preventDefault()
+    this.failed = true
+    this.statusTarget.textContent = "The upload didn't finish. Try again."
   }
 }

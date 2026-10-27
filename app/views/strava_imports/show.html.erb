@@ -46,7 +46,7 @@
     <%= form.label :export, "Your Strava export", class: "label" %>
     <%= form.file_field :export, accept: ".zip,application/zip", direct_upload: true, required: true,
           class: "block text-sm text-quiet file:mr-3 file:rounded-sm file:border file:border-rule-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:text-ink",
-          data: { action: "direct-upload:progress->upload-progress#progress direct-upload:end->upload-progress#end" } %>
+          data: { action: "direct-upload:start->upload-progress#start direct-upload:progress->upload-progress#progress direct-upload:end->upload-progress#end direct-upload:error->upload-progress#error" } %>
     <p class="hint">
       The zip can be large. It uploads when you press Import, so keep this page open until it's done.
     </p>
