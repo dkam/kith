@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_27_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_000200) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -221,6 +221,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_000100) do
     t.index ["member_id", "kind"], name: "index_sources_on_member_id_and_kind", unique: true
   end
 
+  create_table "strava_imports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "finished_at"
+    t.integer "member_id", null: false
+    t.json "result", default: {}, null: false
+    t.integer "state", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["member_id", "created_at"], name: "index_strava_imports_on_member_id_and_created_at"
+    t.index ["member_id"], name: "index_strava_imports_one_unfinished_per_member", unique: true, where: "state IN (0, 10)"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "comments", "actors"
@@ -241,4 +252,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_000100) do
   add_foreign_key "posts", "actors"
   add_foreign_key "sessions", "members"
   add_foreign_key "sources", "members"
+  add_foreign_key "strava_imports", "members"
 end
