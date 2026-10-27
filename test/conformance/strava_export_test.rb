@@ -19,8 +19,10 @@ require "test_helper"
 # is checked against Strava's own distance instead: the median, over every FIT
 # ride of 100 m or more, of the stored track's distance over Strava's, which
 # was 0.999 when the reader was written (f0fa317). A median, because a GPS
-# glitch throws off one ride and a decoder bug (scale, byte order, dropped
-# records) throws off all of them.
+# glitch throws off one ride and a misread position (scale, byte order, the
+# wrong field) throws off all of them. It does not catch dropped records: at
+# one a second, keeping every other one barely moves a ride's distance. Those
+# are left to the FIT tests in test/models/track/read_test.rb.
 #
 # Every failure names activity ids, never a value: an assert_equal on two
 # tracks would print a member's coordinates into the test output. The FIT
