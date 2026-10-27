@@ -87,9 +87,9 @@ class StravaExportTest < ActiveSupport::TestCase
     Thread.current[:opened_entries] = nil
   end
 
-  def assert_refused(path, message = nil)
+  def assert_refused(path, message = nil, **options)
     assert_no_difference [ "Entry.count", "Source.count", "ActiveStorage::Blob.count" ] do
-      error = assert_raises(StravaExport::Refused) { import(path) }
+      error = assert_raises(StravaExport::Refused) { import(path, **options) }
       assert_match message, error.message if message
     end
   end
@@ -373,6 +373,18 @@ class StravaExportTest < ActiveSupport::TestCase
 
     not_zip = File.join(@dir, "not.zip").tap { File.write(_1, "not a zip") }
     assert_refused not_zip, "not a zip"
+  end
+
+  # A zip's central directory is read whole when it is opened, and a crafted
+  # one can list millions of entries. The count is in the zip's last few
+  # bytes, so it is checked there, before the directory is parsed at all.
+  test "a zip of more entries than the cap is refused before any entry is read" do
+    path = export # activities.csv and two activity files
+
+    opened = opened_entries { assert_refused path, "more than 2 entries", max_entries: 2 }
+
+    assert_empty opened
+    assert_equal 2, import(path, max_entries: 3).created
   end
 
   test "an oversized activities.csv refuses the import" do
