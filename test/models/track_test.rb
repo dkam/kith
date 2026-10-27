@@ -133,14 +133,23 @@ class TrackTest < ActiveSupport::TestCase
   end
 
   # A GPX can hold a <trkseg> of one point, and a real export does. A
-  # MultiLineString cannot: each line needs two positions. A track is lines,
-  # so a lone point is not part of one, and whatever is written reads back.
-  test "a segment of one point is not a line, so a track drops it, and what it writes reads back" do
-    track = Track.new([ [ point(0.0, time: 0) ], [ point(0.010, time: 0), point(0.011, time: 10) ], [ point(0.02, time: 90) ] ])
+  # MultiLineString cannot: each line needs two positions. But the point is
+  # where the member was — press start, auto-pause, ride on — and a first or
+  # last point is where a trim centres a circle, so it is kept, in its
+  # neighbour, and whatever is written reads back.
+  test "a segment of one point joins the next one, or the one before if it is last, and what it writes reads back" do
+    a, b, c = point(0.0, time: 0), point(0.010, time: 10), point(0.011, time: 20)
+    d, e, f = point(0.02, time: 0), point(0.021, time: 10), point(0.03, time: 20)
+    lons = ->(track) { track.segments.map { |segment| segment.map(&:lon) } }
 
-    assert_equal [ 2 ], track.segments.map(&:size)
+    track = Track.new([ [ a ], [ b, c ], [ d ], [ e ], [ f ] ])
+    assert_equal [ [ 0.0, 0.010, 0.011 ], [ 0.02, 0.021, 0.03 ] ], lons[track]
     assert_equal track, Track.from_geojson(track.to_geojson)
-    assert Track.new([ [ point(0.0) ] ]).empty?
+
+    assert_equal [ [ 0.0, 0.010 ] ], lons[Track.new([ [ a ], [ b ] ])]
+    assert_equal [ [ 0.010, 0.011, 0.02 ] ], lons[Track.new([ [ b, c ], [ d ] ])]
+    assert Track.new([ [ a ] ]).empty?
+    assert Track.new([ [ a ], [] ]).empty?
   end
 
   test "from_geojson refuses anything that is not the stored shape" do

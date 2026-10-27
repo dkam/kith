@@ -63,8 +63,10 @@ class Track
     data
   end
 
-  # A segment of one point is not a line, so it is dropped: a GPX may hold one,
-  # and a stored MultiLineString may not.
+  # A segment of one point is not a line, and a stored MultiLineString may not
+  # hold one, but a GPX may. The point is still where the member was, and may
+  # be where the ride began, so it joins the next segment, or the one before
+  # if it is last. A track of fewer than two points in all is empty.
   #
   # Elevation and times are all or nothing: if any point lacks one, every point
   # loses it, so a stored track never has a position with elevation beside one
@@ -74,7 +76,7 @@ class Track
     unless segments.flatten.all? { |point| point.lat.to_f.between?(-90, 90) && point.lon.to_f.between?(-180, 180) }
       raise Malformed, "a point is not a position"
     end
-    segments = segments.select { |segment| segment.size >= 2 }
+    segments = lines(segments)
     points = segments.flatten
     elevated = points.all?(&:ele)
     timed = points.all?(&:time)
@@ -146,6 +148,19 @@ class Track
   end
 
   private
+    def lines(segments)
+      joined = segments.reject(&:empty?).each_with_object([]) do |segment, lines|
+        if lines.last&.one?
+          lines.last.concat(segment)
+        else
+          lines << segment.dup
+        end
+      end
+      joined[-2].concat(joined.pop) if joined.size > 1 && joined.last.one?
+
+      joined.select { |segment| segment.size >= 2 }
+    end
+
     def from_zero(segment)
       return segment unless timed?
 

@@ -695,8 +695,10 @@ above, and `docs/phase-two.md` for what is designed but not yet built.
 - **A real export's TCX has whitespace before `<?xml`**, which a strict
   parser refuses. `Track::Xml` strips it.
 - **A GPX may hold a one-point segment; a MultiLineString may not.** `Track`
-  drops a segment of fewer than two points as it is built, or it would write
-  a track `Track.from_geojson` then refuses.
+  joins a lone point to the next segment, or the one before if it is last,
+  as it is built. Dropping it would lose where the ride may have begun, and
+  move the trim's start circle; keeping it alone would write a track
+  `Track.from_geojson` then refuses.
 - **`full_track` is its owner's alone**, and the whole ride: it is a GPS trace
   of their house. Never render it, return it from MCP or an API, or print a
   coordinate from it. A reader will get the trimmed copy, which sharing adds.
