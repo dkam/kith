@@ -6,10 +6,18 @@ require "test_helper"
 #   KITH_STRAVA_EXPORT=~/Development/kith/strava-export/export_7448.zip \
 #     bin/rails test test/conformance/strava_export_test.rb
 #
-# The original files are the answer key twice over: each stored track is its
-# file's points, rounded to six places, and Track#trim over every ride leaves
+# The original files are the answer key three times over: each stored track
+# is its file's points, rounded to six places; it holds as many points as a
+# count of the file's own XML finds; and Track#trim over every ride leaves
 # nothing within the member's radius of either recorded end, with no
 # tolerance. That proves the trim on real rides before anything shares one.
+#
+# The first check reads each file with Track.read, the reader under test, so
+# it proves the round trip through storage and not the reading. The count is
+# the independent key: Nokogiri, without Track, over every GPX and TCX. A FIT
+# has no XML to count; its reader was checked once, by hand, when it was
+# written (f0fa317): every ride's distance against Strava's own, to a median
+# ratio of 0.999. This test does not repeat that.
 #
 # Every failure names activity ids, never a value: an assert_equal on two
 # tracks would print a member's coordinates into the test output.
@@ -32,7 +40,7 @@ class StravaExportConformanceTest < ActiveSupport::TestCase
     workouts = @member.sources.strava_export.first.entries.index_by(&:external_id)
     assert_equal rows.keys.sort, workouts.keys.sort
 
-    not_as_recorded, not_from_zero, trimmed_too_little = [], [], []
+    not_as_recorded, miscounted, not_from_zero, trimmed_too_little = [], [], [], []
 
     Zip::File.open(@path) do |zip|
       rows.each do |id, filename|
@@ -40,12 +48,15 @@ class StravaExportConformanceTest < ActiveSupport::TestCase
         recorded = filename.blank? ? Track.new([]) : read(zip, filename)
 
         not_as_recorded << id unless as_recorded?(stored, recorded)
+        count = counted(zip, filename)
+        miscounted << id unless count.nil? || stored.points.size == (count < 2 ? 0 : count)
         not_from_zero << id unless stored.segments.all? { |segment| segment.first.time.nil? || segment.first.time.zero? }
         trimmed_too_little << id unless trimmed_clear_of_its_ends?(stored)
       end
     end
 
     assert_empty not_as_recorded, "these stored tracks are not their file's points, rounded to 6 places"
+    assert_empty miscounted, "these stored tracks do not hold as many points as their file's XML"
     assert_empty not_from_zero, "these stored tracks have a segment whose times do not start at 0"
     assert_empty trimmed_too_little, "the trim left a point within #{@member.trim_radius_m} m of an end of these"
 
@@ -66,6 +77,25 @@ class StravaExportConformanceTest < ActiveSupport::TestCase
     def read(zip, filename)
       format = filename[StravaExport::FILENAME, 1]
       zip.find_entry(filename).get_input_stream { |io| Track.read(io, format:) }
+    end
+
+    # How many positions a GPX or TCX holds, counted without Track: a GPX's
+    # trkpts inside a trkseg, and a TCX's Trackpoints that have a Position. A
+    # lone point in a GPX segment is kept, so every one counts; a whole file
+    # of fewer than two is no line at all. nil for a FIT, or no file.
+    def counted(zip, filename)
+      format = filename.to_s[StravaExport::FILENAME, 1] or return
+      return if format.start_with?("fit")
+
+      data = zip.find_entry(filename).get_input_stream(&:read)
+      data = Zlib.gunzip(data) if format.end_with?(".gz")
+      document = Nokogiri::XML(data.b.lstrip)
+
+      if format.start_with?("gpx")
+        document.xpath("//*[local-name()='trkseg']/*[local-name()='trkpt']").size
+      else
+        document.xpath("//*[local-name()='Trackpoint'][*[local-name()='Position']]").size
+      end
     end
 
     # Point for point, positions and elevation exactly; times as the stored
