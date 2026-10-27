@@ -19,6 +19,9 @@ Rails.application.routes.draw do
     # A member's agent endpoints. `update` is the reset button: the old token
     # stops working the moment it returns, which is the point of it.
     resources :mcp_tokens, only: %i[ create update destroy ]
+
+    # Importing a Strava export: /settings/strava. See StravaImport.
+    resource :strava_import, only: %i[ show create ], path: "strava", controller: "strava_imports"
   end
 
   delete "settings/avatar", to: "settings#destroy_avatar", as: :settings_avatar

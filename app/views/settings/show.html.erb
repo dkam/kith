@@ -150,6 +150,18 @@
   <% end %>
 </section>
 
+<%# Where a member's own records come in from. Each source has a page of its
+    own; Strava, for now, is the only one. %>
+<section class="mt-12 border-t border-rule pt-8">
+  <h2 class="font-serif text-xl font-semibold">Your activities</h2>
+  <p class="mt-2 max-w-prose text-sm text-quiet">
+    Bring in your rides, runs and walks from a Strava export. They arrive as drafts that only you can see.
+  </p>
+  <div class="mt-4">
+    <%= link_to "Import from Strava", settings_strava_import_path, class: "btn-quiet" %>
+  </div>
+</section>
+
 <%# On the web the masthead carries these. In the phone apps there is no
     masthead — the shell draws the navigation, and Invites and signing out are
     not tabs — so this page is the way to both. It reads as a tidy-up on the
