@@ -1,0 +1,51 @@
+<%# The latest import, replaced by Turbo Stream as its job moves it on — so the
+    id is the same whichever import this is. Counts and activity ids only:
+    nothing from the zip, and never its filename. %>
+<section id="latest_strava_import" class="mt-8 border-t border-rule pt-8" aria-live="polite">
+  <p class="micro">Latest import</p>
+
+  <% case strava_import.state %>
+  <% when "queued" %>
+    <p class="mt-2 text-sm text-ink">Waiting to start.</p>
+  <% when "running" %>
+    <p class="mt-2 text-sm text-ink">Importing. This page will update when it's done.</p>
+  <% when "done" %>
+    <p class="mt-2 text-sm text-ink">
+      Finished <%= time_ago_in_words strava_import.finished_at %> ago. The zip has been deleted.
+    </p>
+    <dl class="mt-4 grid max-w-sm grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 font-sans text-sm">
+      <% {
+        "created" => "New drafts",
+        "updated" => "Drafts updated",
+        "unchanged" => "Unchanged",
+        "removed" => "Drafts no longer in the export, removed"
+      }.each do |key, label| %>
+        <dt class="text-quiet"><%= label %></dt>
+        <dd class="text-right tabular-nums text-ink" id="strava_import_<%= key %>"><%= strava_import.result[key] %></dd>
+      <% end %>
+    </dl>
+
+    <% if (ids = strava_import.failed_activity_ids).any? %>
+      <p class="mt-4 text-sm text-ink">
+        <%= pluralize ids.size, "activity" %> couldn't be read, and <%= ids.one? ? "was" : "were" %> left out:
+      </p>
+      <ul class="mt-2 font-mono text-xs text-quiet" id="strava_import_failed">
+        <% ids.each do |id| %>
+          <li><%= id %></li>
+        <% end %>
+      </ul>
+      <p class="hint">These are Strava's activity ids. Importing again tries them again.</p>
+    <% end %>
+  <% when "refused" %>
+    <p class="mt-2 text-sm text-ink">
+      Kith couldn't import this file: <%= strava_import.result["refused"] %>. Nothing was changed, and
+      the file has been deleted.
+    </p>
+    <p class="hint">Check that it's the zip Strava sent you, as it came.</p>
+  <% when "failed" %>
+    <p class="mt-2 text-sm text-ink">
+      Something went wrong, and the import stopped partway. The file has been deleted.
+    </p>
+    <p class="hint">Importing again is safe: what already arrived is kept, and nothing is doubled.</p>
+  <% end %>
+</section>
