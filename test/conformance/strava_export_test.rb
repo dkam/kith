@@ -15,12 +15,17 @@ require "test_helper"
 # The first check reads each file with Track.read, the reader under test, so
 # it proves the round trip through storage and not the reading. The count is
 # the independent key: Nokogiri, without Track, over every GPX and TCX. A FIT
-# has no XML to count; its reader was checked once, by hand, when it was
-# written (f0fa317): every ride's distance against Strava's own, to a median
-# ratio of 0.999. This test does not repeat that.
+# has no XML to count, and its reader is the only one written by hand, so it
+# is checked against Strava's own distance instead: the median, over every FIT
+# ride of 100 m or more, of the stored track's distance over Strava's, which
+# was 0.999 when the reader was written (f0fa317). A median, because a GPS
+# glitch throws off one ride and a decoder bug (scale, byte order, dropped
+# records) throws off all of them.
 #
 # Every failure names activity ids, never a value: an assert_equal on two
-# tracks would print a member's coordinates into the test output.
+# tracks would print a member's coordinates into the test output. The FIT
+# check reports its median and how many rides it counted, and no one ride's
+# distance.
 class StravaExportConformanceTest < ActiveSupport::TestCase
   setup do
     @path = ENV["KITH_STRAVA_EXPORT"].presence&.then { File.expand_path(_1) }
@@ -40,7 +45,7 @@ class StravaExportConformanceTest < ActiveSupport::TestCase
     workouts = @member.sources.strava_export.first.entries.index_by(&:external_id)
     assert_equal rows.keys.sort, workouts.keys.sort
 
-    not_as_recorded, miscounted, not_from_zero, trimmed_too_little = [], [], [], []
+    not_as_recorded, miscounted, not_from_zero, trimmed_too_little, fit_ratios = [], [], [], [], []
 
     Zip::File.open(@path) do |zip|
       rows.each do |id, filename|
@@ -52,6 +57,9 @@ class StravaExportConformanceTest < ActiveSupport::TestCase
         miscounted << id unless count.nil? || stored.points.size == (count < 2 ? 0 : count)
         not_from_zero << id unless stored.segments.all? { |segment| segment.first.time.nil? || segment.first.time.zero? }
         trimmed_too_little << id unless trimmed_clear_of_its_ends?(stored)
+
+        strava_m = workouts.fetch(id).data["distance_m"]
+        fit_ratios << stored.distance_m / strava_m if fit?(filename) && strava_m.to_f >= 100
       end
     end
 
@@ -59,6 +67,10 @@ class StravaExportConformanceTest < ActiveSupport::TestCase
     assert_empty miscounted, "these stored tracks do not hold as many points as their file's XML"
     assert_empty not_from_zero, "these stored tracks have a segment whose times do not start at 0"
     assert_empty trimmed_too_little, "the trim left a point within #{@member.trim_radius_m} m of an end of these"
+
+    median = fit_ratios.sort.then { |r| r.empty? ? nil : (r[(r.size - 1) / 2] + r[r.size / 2]) / 2 }
+    assert median&.between?(0.99, 1.01),
+      "the median FIT distance over Strava's is #{median&.round(4).inspect}, over #{fit_ratios.size} rides"
 
     again = StravaExport.new(member: @member, path: @path).import
     assert_equal [ 0, 0, 0, [] ], again.to_h.values_at(:created, :updated, :removed, :failed).then { |c, u, r, f| [ c, u, r, f.map(&:first) ] }
@@ -85,7 +97,7 @@ class StravaExportConformanceTest < ActiveSupport::TestCase
     # of fewer than two is no line at all. nil for a FIT, or no file.
     def counted(zip, filename)
       format = filename.to_s[StravaExport::FILENAME, 1] or return
-      return if format.start_with?("fit")
+      return if fit?(filename)
 
       data = zip.find_entry(filename).get_input_stream(&:read)
       data = Zlib.gunzip(data) if format.end_with?(".gz")
@@ -97,6 +109,8 @@ class StravaExportConformanceTest < ActiveSupport::TestCase
         document.xpath("//*[local-name()='Trackpoint'][*[local-name()='Position']]").size
       end
     end
+
+    def fit?(filename) = filename.to_s[StravaExport::FILENAME, 1].to_s.start_with?("fit")
 
     # Point for point, positions and elevation exactly; times as the stored
     # form keeps them, relative to each segment's first point.
