@@ -615,6 +615,16 @@ certificate covers.
 loads, so every line of it can be wrong for months with a green suite behind
 it.
 
+**A Strava export is up to 2 GB, and it passes through the proxy, Puma and
+the worker's temp directory.** Production stores files with the Disk service,
+so a direct upload is a PUT to `/rails/active_storage/disk/` on the web
+container itself. The proxy in front must accept request bodies of
+`StravaImport::MAX_BYTES` on that path, or a large export stops partway with
+an error from the proxy rather than from Kith (nginx's default is 1 MB). Then
+`StravaImportJob` reads it with `export.open`, which copies the whole zip into
+the worker's temporary directory first: the worker needs that much free
+space in `/tmp` for as long as an import runs.
+
 ### Releases
 
 Several different things share the word *version*, and each has a name:
