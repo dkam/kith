@@ -53,7 +53,7 @@ gem "lexxy", "~> 0.9.32"
 gem "sentry-rails"
 # The official Ruby MCP SDK, for the per-member endpoint an agent connects to
 # [https://github.com/modelcontextprotocol/ruby-sdk]
-gem "mcp", "~> 1.5"
+gem "mcp", "~> 1.9"
 # Reads a member's Strava account export, entry by entry and without
 # extracting it — see StravaExport [https://github.com/rubyzip/rubyzip]
 gem "rubyzip", "~> 3.6"
