@@ -352,6 +352,13 @@ Integer primary keys. Don't reach for UUIDs.
   goes with everything else.
 - `MediaHelper` is the only thing in the app that turns an attachment into a
   `src`. Keep it that way.
+- **A direct upload needs a session.** Active Storage's controllers inherit
+  from `ActionController::Base`, not `ApplicationController`, so they never
+  ask who is there. Its direct upload let anybody make a blob and write into
+  storage, with no cap on the size (kith-web#11). `DirectUploadsController`
+  is drawn at the same path, ahead of it, with `Authentication`. Only that step
+  is guarded: the `PUT` that carries the bytes is authorised by the token it
+  hands out.
 
 ---
 
