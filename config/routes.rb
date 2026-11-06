@@ -59,6 +59,12 @@ Rails.application.routes.draw do
   get "media/pending/:signed_id(/:filename)", to: "media#pending", as: :pending_media, format: false,
     constraints: { signed_id: %r{[^/]+}, filename: %r{[^/]+} }
 
+  # Active Storage's own direct upload asks nobody for a session, so ours is
+  # drawn at its path, ahead of it, and every direct-upload field, which
+  # points at `rails_direct_uploads_url`, reaches ours. See
+  # DirectUploadsController.
+  post "#{ActiveStorage.routes_prefix}/direct_uploads", to: "direct_uploads#create", as: nil
+
   # Profiles read as handles: /@alice
   get "@:handle", to: "profiles#show", as: :profile, constraints: { handle: /[A-Za-z0-9_]{2,32}/ }
 
