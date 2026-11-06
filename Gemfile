@@ -32,7 +32,7 @@ gem "solid_cable"
 # json 3.x changes JSON.parse's arity in a way Active Support 8.1 does not yet
 # handle (ActiveSupport::JSON.decode raises ArgumentError). Ruby 4.0 ships 3.x
 # as a default gem, so pin it until Rails catches up.
-gem "json", "~> 2.7"
+gem "json", "~> 3.0"
 
 gem "bootsnap", require: false
 
