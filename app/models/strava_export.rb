@@ -58,20 +58,29 @@ class StravaExport
     "snowboard" => [ "Snowboard" ]
   }.flat_map { |kith, stravas| stravas.map { |strava| [ strava, kith ] } }.to_h.freeze
 
-  attr_reader :member, :path, :limit
+  # Strava's own exports hold a file per activity and a few dozen besides.
+  MAX_ENTRIES = 100_000
+
+  attr_reader :member, :path, :limit, :max_entries
 
   # `limit` is the most any one entry may decompress to, counted as it is read
   # and including an inner .gz: an entry's declared size is whatever whoever
   # made the zip wanted it to say.
-  def initialize(member:, path:, limit: Track::LIMIT)
+  def initialize(member:, path:, limit: Track::LIMIT, max_entries: MAX_ENTRIES)
     @member = member
     @path = path
     @limit = limit
+    @max_entries = max_entries
   end
 
   def self.activity_type(strava_type) = ACTIVITY_TYPES.fetch(strava_type.to_s, "other")
 
   def import
+    # Opening a zip reads its whole central directory, which can list millions
+    # of entries. The count is in the end record, so it is checked first.
+    entries = Zip::File.count_entries(path)
+    raise Refused, "the export has more than #{max_entries} entries" if entries > max_entries
+
     Zip::File.open(path) do |zip|
       rows = activities(zip)
       source = member.sources.find_or_create_by!(kind: :strava_export)

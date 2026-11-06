@@ -1,0 +1,57 @@
+<% content_for :title, "Import from Strava" %>
+
+<p class="micro"><%= link_to "You", settings_path %></p>
+<h1 class="mt-1 font-serif text-2xl font-semibold">Import from Strava</h1>
+
+<div class="mt-4 max-w-prose space-y-3 text-sm text-quiet">
+  <p>
+    Ask Strava for your account export: on strava.com, <span class="text-ink">Settings</span>,
+    then <span class="text-ink">My Account</span>, then <span class="text-ink">Download or Delete
+    Your Account</span>, and request your archive. Strava emails you a link to a zip. Upload
+    that zip here as it is.
+  </p>
+  <p>
+    Every ride, run and walk arrives as a draft that only you can see. Kith reads the list of
+    activities and their GPS files, and nothing else in the zip, then deletes the zip.
+  </p>
+  <p>
+    Exports include everything you've ever recorded, so importing a newer one later adds what's
+    new and leaves the rest as it was.
+  </p>
+</div>
+
+<%# Signed for this member alone: nobody else can subscribe to their import. %>
+<%= turbo_stream_from current_member, :strava_imports %>
+
+<% if @latest %>
+  <%= render @latest %>
+<% else %>
+  <div id="latest_strava_import"></div>
+<% end %>
+
+<%= form_with model: @strava_import, scope: :strava_import, url: settings_strava_import_path,
+      class: "mt-8 space-y-5 border-t border-rule pt-8",
+      data: { controller: "upload-progress" } do |form| %>
+  <% if @strava_import.errors.any? %>
+    <div class="alert">
+      <ul class="list-disc space-y-1 pl-4">
+        <% @strava_import.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :export, "Your Strava export", class: "label" %>
+    <%= form.file_field :export, accept: ".zip,application/zip", direct_upload: true, required: true,
+          class: "block text-sm text-quiet file:mr-3 file:rounded-sm file:border file:border-rule-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:text-ink",
+          data: { action: "direct-upload:start->upload-progress#start direct-upload:progress->upload-progress#progress direct-upload:end->upload-progress#end direct-upload:error->upload-progress#error" } %>
+    <p class="hint">
+      The zip can be large. It uploads when you press Import, so keep this page open until it's done.
+    </p>
+    <p class="hint" role="status" data-upload-progress-target="status"></p>
+  </div>
+
+  <%= form.submit "Import", class: "btn" %>
+<% end %>

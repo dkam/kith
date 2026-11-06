@@ -179,6 +179,26 @@ a ride whole.
   `Visibility`. The original file is never kept.
 - **No link out.** `uri` is NULL on every workout: the Strava activity shows
   the whole track and the true totals. The id is in `external_id`.
+- **A member imports from settings** (kith-web#6), at `/settings/strava`. The
+  zip arrives by direct upload, the way photos do, and the form carries only
+  its blob's signed id — of a blob attached to nothing, because the job purges
+  what it is given, and a photo's blob is not an export. A `StravaImport` is
+  `queued → running → done | refused | failed`, one unfinished per member
+  (the model checks; a partial unique index holds it). `StravaImportJob` is
+  given the import's **id**, never a path, because a job's arguments sit in
+  the queue database. It opens the blob as a tempfile, runs `StravaExport`,
+  records the counts and failed ids, or a `Refused` message, or only the class
+  of anything else, and **purges the zip in an `ensure`**. What it re-raises
+  is `StravaImportJob::Failed`, carrying the class name and the backtrace and
+  no cause, because the error report, solid_queue's failed executions and the
+  job log all read the message. The result reaches the page by Turbo Stream,
+  on a stream signed for that member alone. The zip is capped at 2 GB, on the
+  blob, before anything is enqueued; `StravaExport` refuses more than 100,000
+  entries from the zip's end record, before its directory is parsed.
+- **`PurgeUnattachedBlobsJob` sweeps every hour**: any blob attached to
+  nothing for a day goes — an export whose form never arrived, and the
+  composer's orphaned photos alike — and an import left queued or running for
+  a day is failed and its zip purged, so a dead process locks nobody out.
 - **The stored track** is a GeoJSON Feature: a MultiLineString, one line per
   segment, with `properties.times` parallel to it in whole seconds **since
   that segment's first point** — never absolute, because on a trimmed copy an
@@ -602,6 +622,16 @@ certificate covers.
 loads, so every line of it can be wrong for months with a green suite behind
 it.
 
+**A Strava export is up to 2 GB, and it passes through the proxy, Puma and
+the worker's temp directory.** Production stores files with the Disk service,
+so a direct upload is a PUT to `/rails/active_storage/disk/` on the web
+container itself. The proxy in front must accept request bodies of
+`StravaImport::MAX_BYTES` on that path, or a large export stops partway with
+an error from the proxy rather than from Kith (nginx's default is 1 MB). Then
+`StravaImportJob` reads it with `export.open`, which copies the whole zip into
+the worker's temporary directory first: the worker needs that much free
+space in `/tmp` for as long as an import runs.
+
 ### Releases
 
 Several different things share the word *version*, and each has a name:
@@ -692,6 +722,17 @@ above, and `docs/phase-two.md` for what is designed but not yet built.
 
 ## Things that will bite you
 
+- **A direct upload is in storage before its form arrives.** Whatever the
+  form then decides, the file is already there: so a size cap is checked on
+  the blob, never on a field, a refused upload is purged on the spot, and
+  `PurgeUnattachedBlobsJob` catches the uploads whose form never came. For a
+  Strava export that file is the member's whole account.
+- **Nothing about a Strava zip's contents may reach a log, an error report or
+  a page** — not an exception's message, and not the blob's filename, which
+  is Strava's. A refusal's message is shown only because it is a
+  `StravaExport::Refused`, which names a part of the file and never a value
+  from it; `StravaImport#refuse!` will take nothing else. `filename` is in
+  `filter_parameters` for the direct upload's request line.
 - **Strava's `activities.csv` repeats its headers.** Distance, Elapsed Time,
   Max Heart Rate, Relative Effort and Commute each appear twice: first in
   display units (Distance in km), then in SI (metres, seconds).

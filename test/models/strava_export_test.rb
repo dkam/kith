@@ -1,18 +1,11 @@
 require "test_helper"
 require_relative "../test_helpers/fit_writer"
+require_relative "../test_helpers/strava_export_builder"
 
-# Every export here is built on the fly, from the invented tracks in
-# test/fixtures/files/tracks, with a CSV laid out the way Strava lays it out:
-# Distance twice, in km and then in metres, and the columns Kith must never
-# read sitting between the ones it does.
+# Every export here is built on the fly by StravaExportBuilder.
 class StravaExportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
-
-  TRACKS = Rails.root.join("test/fixtures/files/tracks")
-
-  HEADER = [ "Activity ID", "Activity Date", "Activity Name", "Activity Type", "Activity Description",
-    "Elapsed Time", "Distance", "Max Heart Rate", "Commute", "Activity Private Note", "Activity Gear",
-    "Filename", "Athlete Weight", "Elapsed Time", "Moving Time", "Distance", "Elevation Gain", "Calories" ].freeze
+  include StravaExportBuilder
 
   # Records which zip entries were opened, so a test can prove the rest never
   # were. Inert outside `opened_entries`.
@@ -31,48 +24,9 @@ class StravaExportTest < ActiveSupport::TestCase
 
   teardown { FileUtils.remove_entry(@dir) }
 
-  # One CSV row, Strava's way. Every value is overridable by column name;
-  # :distance_km and :distance_m are the two Distance columns.
-  def row(id, filename: "activities/#{id}.gpx", **values)
-    defaults = {
-      "Activity ID" => id.to_s, "Activity Date" => "Sep 19, 2026, 4:23:34 AM", "Activity Name" => "Ride #{id}",
-      "Activity Type" => "Ride", "Activity Description" => "description #{id}", "Max Heart Rate" => "171.0",
-      "Commute" => "false", "Activity Private Note" => "private note #{id}", "Activity Gear" => "the bike",
-      "Filename" => filename, "Athlete Weight" => "80.0", "Moving Time" => "1235.0", "Elevation Gain" => "19.2",
-      "Calories" => "400"
-    }.merge(values.transform_keys(&:to_s))
-
-    HEADER.each_with_index.map do |name, index|
-      case [ name, index ]
-      in [ "Distance", 6 ] then values.fetch(:distance_km, "3.33")
-      in [ "Distance", _ ] then values.fetch(:distance_m, "3331.3")
-      in [ "Elapsed Time", _ ] then "1262"
-      else defaults.fetch(name)
-      end
-    end
-  end
-
-  def csv(rows, header: HEADER) = CSV.generate { |out| ([ header ] + rows).each { |r| out << r } }
-
-  def export(rows: [ row(101), row(102, filename: "activities/102.tcx.gz") ], csv: nil, files: nil, name: "export.zip")
-    files ||= { "activities/101.gpx" => gpx, "activities/102.tcx.gz" => ActiveSupport::Gzip.compress(tcx) }
-    path = File.join(@dir, name)
-    File.delete(path) if File.exist?(path)
-
-    Zip::File.open(path, create: true) do |zip|
-      zip.get_output_stream("activities.csv") { |out| out.write(csv || self.csv(rows)) }
-      files.each { |entry, data| zip.get_output_stream(entry) { |out| out.write(data) } }
-    end
-
-    path
-  end
-
   # A file's track as it is stored: every point, with times relative to each
   # segment's start.
   def stored(data, format) = Track.from_geojson(Track.read(StringIO.new(data), format:).to_geojson)
-
-  def gpx = TRACKS.join("ride.gpx").read
-  def tcx = TRACKS.join("ride.tcx").read
 
   def import(path = export, **options) = StravaExport.new(member: @member, path:, **options).import
 
@@ -87,9 +41,9 @@ class StravaExportTest < ActiveSupport::TestCase
     Thread.current[:opened_entries] = nil
   end
 
-  def assert_refused(path, message = nil)
+  def assert_refused(path, message = nil, **options)
     assert_no_difference [ "Entry.count", "Source.count", "ActiveStorage::Blob.count" ] do
-      error = assert_raises(StravaExport::Refused) { import(path) }
+      error = assert_raises(StravaExport::Refused) { import(path, **options) }
       assert_match message, error.message if message
     end
   end
@@ -373,6 +327,18 @@ class StravaExportTest < ActiveSupport::TestCase
 
     not_zip = File.join(@dir, "not.zip").tap { File.write(_1, "not a zip") }
     assert_refused not_zip, "not a zip"
+  end
+
+  # A zip's central directory is read whole when it is opened, and a crafted
+  # one can list millions of entries. The count is in the zip's last few
+  # bytes, so it is checked there, before the directory is parsed at all.
+  test "a zip of more entries than the cap is refused before any entry is read" do
+    path = export # activities.csv and two activity files
+
+    opened = opened_entries { assert_refused path, "more than 2 entries", max_entries: 2 }
+
+    assert_empty opened
+    assert_equal 2, import(path, max_entries: 3).created
   end
 
   test "an oversized activities.csv refuses the import" do
